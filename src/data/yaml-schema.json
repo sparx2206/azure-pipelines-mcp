@@ -1,0 +1,182 @@
+{
+  "description": "Azure Pipelines YAML schema reference — structure of pipeline definitions.",
+  "notation": {
+    "keyword: datatype": "A keyword with a specific data type value",
+    "[ datatype ]": "Array of the specified data type",
+    "{ string: string }": "Mapping of string keys to string values",
+    "type1 | type2": "Value can be either type"
+  },
+  "elements": {
+    "pipeline": {
+      "title": "Pipeline (root)",
+      "description": "The top-level element of a YAML pipeline definition. Defines the entire CI/CD process.",
+      "syntax": "trigger: trigger\npr: pr\nname: string\npool: pool\nvariables: variables\nstages: [ stage ]\nsteps: [ step ]\nresources: resources\nparameters: [ parameter ]\nschedules: [ cron ]\nextends: template\nlockBehavior: sequential | runLatest",
+      "notes": "A pipeline must contain at least one stage, job, or step. For simple pipelines, you can omit stages/jobs and define steps directly."
+    },
+    "stages": {
+      "title": "Stages",
+      "description": "A stage is a collection of related jobs. By default, stages run sequentially. Use dependsOn for custom ordering or parallel execution.",
+      "syntax": "stages:\n- stage: string\n  displayName: string\n  dependsOn: string | [ string ]\n  condition: string\n  pool: pool\n  variables: variables\n  jobs: [ job ]\n  lockBehavior: sequential | runLatest\n  templateContext: object",
+      "properties": [
+        { "name": "stage", "type": "string", "description": "Stage identifier (A-Z, a-z, 0-9, _, no spaces). Use 'stage:' for pipeline stage, '- template:' for template stage." },
+        { "name": "displayName", "type": "string", "description": "Human-readable name shown in the UI." },
+        { "name": "dependsOn", "type": "string | string[]", "description": "Stages that must complete before this stage runs. Empty for no dependencies." },
+        { "name": "condition", "type": "string", "description": "Expression to evaluate whether to run. Default: succeeded()." },
+        { "name": "pool", "type": "pool", "description": "Pool to use for jobs in this stage (can be overridden per job)." },
+        { "name": "variables", "type": "variables", "description": "Stage-scoped variables." },
+        { "name": "jobs", "type": "job[]", "description": "Jobs that make up this stage." }
+      ],
+      "example": "stages:\n- stage: Build\n  displayName: 'Build stage'\n  jobs:\n  - job: BuildJob\n    steps:\n    - script: echo Building\n\n- stage: Deploy\n  displayName: 'Deploy stage'\n  dependsOn: Build\n  condition: succeeded()\n  jobs:\n  - deployment: DeployWeb\n    environment: production"
+    },
+    "jobs": {
+      "title": "Jobs",
+      "description": "A job is a collection of steps that run on an agent. Jobs within a stage run in parallel by default.",
+      "types": {
+        "job": {
+          "description": "Standard job running on an agent.",
+          "syntax": "jobs:\n- job: string\n  displayName: string\n  dependsOn: string | [ string ]\n  condition: string\n  pool: pool\n  container: container\n  strategy: strategy\n  variables: variables\n  steps: [ step ]\n  timeoutInMinutes: number\n  cancelTimeoutInMinutes: number\n  continueOnError: boolean\n  services: { string: string }\n  workspace: workspace"
+        },
+        "deployment": {
+          "description": "Deployment job targeting an environment. Supports deployment strategies (runOnce, canary, rolling).",
+          "syntax": "jobs:\n- deployment: string\n  displayName: string\n  environment: string | environment\n  strategy:\n    runOnce: runOnceStrategy\n    canary: canaryStrategy\n    rolling: rollingStrategy\n  variables: variables\n  pool: pool\n  timeoutInMinutes: number"
+        },
+        "template": {
+          "description": "Reference to a job template.",
+          "syntax": "jobs:\n- template: string\n  parameters: { string: any }"
+        }
+      },
+      "example": "jobs:\n- job: Build\n  pool:\n    vmImage: 'ubuntu-latest'\n  steps:\n  - script: echo Building\n\n- job: Test\n  dependsOn: Build\n  steps:\n  - script: echo Testing"
+    },
+    "steps": {
+      "title": "Steps",
+      "description": "A step is a linear sequence of operations within a job. Each step runs in its own process on the agent.",
+      "types": {
+        "script": {
+          "description": "Run a script using cmd.exe (Windows) or bash (Linux/macOS).",
+          "syntax": "- script: string\n  displayName: string\n  condition: string\n  enabled: boolean\n  continueOnError: boolean\n  env: { string: string }\n  timeoutInMinutes: number\n  workingDirectory: string",
+          "example": "- script: echo Hello World\n  displayName: 'Run a script'"
+        },
+        "bash": {
+          "description": "Run a Bash script on all platforms.",
+          "syntax": "- bash: string\n  displayName: string\n  condition: string\n  env: { string: string }",
+          "example": "- bash: |\n    echo \"Hello from Bash\"\n    ls -la"
+        },
+        "powershell": {
+          "description": "Run a PowerShell Core (pwsh) script on all platforms.",
+          "syntax": "- powershell: string\n  displayName: string\n  condition: string\n  errorActionPreference: stop | continue | silentlyContinue\n  env: { string: string }"
+        },
+        "pwsh": {
+          "description": "Alias for powershell. Runs PowerShell Core (pwsh) on all platforms.",
+          "syntax": "- pwsh: string"
+        },
+        "task": {
+          "description": "Run a task from the Azure Pipelines task catalog.",
+          "syntax": "- task: TaskName@version\n  displayName: string\n  condition: string\n  enabled: boolean\n  continueOnError: boolean\n  inputs:\n    inputName: value\n  env: { string: string }\n  timeoutInMinutes: number\n  retryCountOnTaskFailure: number",
+          "example": "- task: DotNetCoreCLI@2\n  displayName: 'Build project'\n  inputs:\n    command: 'build'\n    projects: '**/*.csproj'"
+        },
+        "checkout": {
+          "description": "Check out source code.",
+          "syntax": "- checkout: self | none | repositoryName\n  clean: boolean\n  fetchDepth: number\n  lfs: boolean\n  submodules: true | recursive\n  persistCredentials: boolean",
+          "example": "- checkout: self\n  clean: true\n  fetchDepth: 0"
+        },
+        "download": {
+          "description": "Download pipeline artifacts.",
+          "syntax": "- download: current | pipelineName | none\n  artifact: string\n  patterns: string"
+        },
+        "publish": {
+          "description": "Publish a pipeline artifact.",
+          "syntax": "- publish: string\n  artifact: string\n  displayName: string"
+        },
+        "template": {
+          "description": "Reference to a step template.",
+          "syntax": "- template: string\n  parameters: { string: any }"
+        }
+      }
+    },
+    "trigger": {
+      "title": "Trigger (CI)",
+      "description": "Continuous integration trigger — defines which branches, paths, and tags trigger the pipeline on push.",
+      "syntax": "trigger:\n  batch: boolean\n  branches:\n    include: [ string ]\n    exclude: [ string ]\n  paths:\n    include: [ string ]\n    exclude: [ string ]\n  tags:\n    include: [ string ]\n    exclude: [ string ]",
+      "shorthand": "trigger: [ string ]  # Short for branches include list",
+      "disable": "trigger: none",
+      "example": "trigger:\n  branches:\n    include:\n    - main\n    - releases/*\n  paths:\n    exclude:\n    - docs/*\n    - '*.md'"
+    },
+    "pr": {
+      "title": "Pull Request Trigger",
+      "description": "Pull request trigger — defines which branches and paths trigger the pipeline on PR creation/update.",
+      "syntax": "pr:\n  autoCancel: boolean\n  drafts: boolean\n  branches:\n    include: [ string ]\n    exclude: [ string ]\n  paths:\n    include: [ string ]\n    exclude: [ string ]",
+      "shorthand": "pr: [ string ]  # Short for branches include list",
+      "disable": "pr: none",
+      "example": "pr:\n  branches:\n    include:\n    - main\n  paths:\n    exclude:\n    - docs/*"
+    },
+    "schedules": {
+      "title": "Scheduled Triggers",
+      "description": "CRON-based scheduled triggers.",
+      "syntax": "schedules:\n- cron: string\n  displayName: string\n  branches:\n    include: [ string ]\n    exclude: [ string ]\n  batch: boolean\n  always: boolean",
+      "cronFormat": "'min hour day month dayOfWeek' — UTC time. Example: '0 3 * * *' = daily at 3:00 AM UTC.",
+      "example": "schedules:\n- cron: '0 3 * * *'\n  displayName: 'Nightly build'\n  branches:\n    include:\n    - main\n  always: true"
+    },
+    "parameters": {
+      "title": "Parameters",
+      "description": "Runtime parameters that can be provided when manually running a pipeline.",
+      "syntax": "parameters:\n- name: string\n  type: string\n  displayName: string\n  default: any\n  values: [ string ]",
+      "types": ["string", "number", "boolean", "object", "step", "stepList", "job", "jobList", "deployment", "deploymentList", "stage", "stageList"],
+      "example": "parameters:\n- name: environment\n  type: string\n  displayName: 'Target environment'\n  default: 'dev'\n  values:\n  - dev\n  - staging\n  - production"
+    },
+    "variables": {
+      "title": "Variables",
+      "description": "Variables can be defined at pipeline, stage, or job level. Supports inline, template, and variable group references.",
+      "syntax": "# Inline mapping\nvariables:\n  myVar: 'value'\n\n# Detailed syntax\nvariables:\n- name: myVar\n  value: 'value'\n  readonly: true\n\n# Variable group reference\nvariables:\n- group: my-variable-group\n\n# Template reference\nvariables:\n- template: vars.yml\n  parameters:\n    env: prod",
+      "example": "variables:\n  buildConfiguration: 'Release'\n  dotnetVersion: '8.0.x'\n- group: my-secrets\n- name: deployTarget\n  value: 'production'\n  readonly: true"
+    },
+    "resources": {
+      "title": "Resources",
+      "description": "External resources consumed by the pipeline.",
+      "types": {
+        "pipelines": {
+          "description": "Reference to another pipeline as a resource (for triggers or artifact consumption).",
+          "syntax": "resources:\n  pipelines:\n  - pipeline: string\n    source: string\n    project: string\n    trigger:\n      branches:\n        include: [ string ]\n        exclude: [ string ]"
+        },
+        "repositories": {
+          "description": "Reference to an external repository.",
+          "syntax": "resources:\n  repositories:\n  - repository: string\n    type: git | github | githubenterprise | bitbucket\n    name: string\n    ref: string\n    endpoint: string"
+        },
+        "containers": {
+          "description": "Container image resource for container jobs.",
+          "syntax": "resources:\n  containers:\n  - container: string\n    image: string\n    endpoint: string\n    env: { string: string }\n    ports: [ string ]\n    volumes: [ string ]\n    options: string"
+        },
+        "packages": {
+          "description": "NuGet or npm package resource.",
+          "syntax": "resources:\n  packages:\n  - package: string\n    type: Npm | NuGet\n    connection: string\n    name: string\n    version: string\n    trigger: none | true"
+        },
+        "webhooks": {
+          "description": "Webhook-based trigger from an external service.",
+          "syntax": "resources:\n  webhooks:\n  - webhook: string\n    connection: string\n    type: string\n    filters:\n    - path: string\n      value: string"
+        }
+      }
+    },
+    "pool": {
+      "title": "Pool",
+      "description": "Specifies the agent pool to run jobs on.",
+      "syntax": "pool:\n  name: string        # Self-hosted pool name\n  vmImage: string     # Microsoft-hosted image\n  demands: string | [ string ]",
+      "microsoftHostedImages": [
+        "ubuntu-latest",
+        "ubuntu-22.04",
+        "ubuntu-24.04",
+        "windows-latest",
+        "windows-2022",
+        "windows-2025",
+        "macOS-latest",
+        "macOS-14",
+        "macOS-15"
+      ],
+      "example": "pool:\n  vmImage: 'ubuntu-latest'\n\n# Self-hosted\npool:\n  name: 'My Self-Hosted Pool'\n  demands:\n  - Agent.OS -equals Linux\n  - docker"
+    },
+    "extends": {
+      "title": "Extends",
+      "description": "Inherit from a pipeline template. The template defines the structure and the extending pipeline fills in parameters.",
+      "syntax": "extends:\n  template: string\n  parameters: { string: any }",
+      "example": "extends:\n  template: pipelines/base-pipeline.yml\n  parameters:\n    buildConfiguration: Release\n    environment: production"
+    }
+  }
+}

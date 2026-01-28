@@ -1,0 +1,139 @@
+{
+  "description": "Azure Pipelines expressions reference — functions, operators, syntax, and type conversions.",
+  "syntaxVariants": {
+    "compileTime": {
+      "syntax": "${{ <expression> }}",
+      "description": "Evaluated at pipeline compile time (template expansion). Available in YAML template expressions.",
+      "example": "${{ variables.myVar }}"
+    },
+    "runtime": {
+      "syntax": "$[ <expression> ]",
+      "description": "Evaluated at runtime. Used for conditions and runtime variable assignments. Only available in YAML pipelines.",
+      "example": "$[ eq(variables['Build.SourceBranch'], 'refs/heads/main') ]"
+    },
+    "macro": {
+      "syntax": "$(variableName)",
+      "description": "Macro syntax for variable substitution. Processed before a step runs.",
+      "example": "$(Build.BuildId)"
+    }
+  },
+  "categories": {
+    "comparison": {
+      "title": "Comparison Functions",
+      "functions": [
+        { "name": "eq", "signature": "eq(operand1, operand2)", "description": "Equal. Returns True if both operands are equal.", "example": "eq(variables.letters, 'ABC')" },
+        { "name": "ne", "signature": "ne(operand1, operand2)", "description": "Not equal. Returns True if operands are not equal.", "example": "ne(1, 2)" },
+        { "name": "lt", "signature": "lt(operand1, operand2)", "description": "Less than. Returns True if left operand is less than right.", "example": "lt(2, 5)" },
+        { "name": "le", "signature": "le(operand1, operand2)", "description": "Less than or equal.", "example": "le(2, 2)" },
+        { "name": "gt", "signature": "gt(operand1, operand2)", "description": "Greater than.", "example": "gt(5, 2)" },
+        { "name": "ge", "signature": "ge(operand1, operand2)", "description": "Greater than or equal.", "example": "ge(5, 5)" },
+        { "name": "in", "signature": "in(needle, ...haystack)", "description": "Returns True if the left operand equals any right operand.", "example": "in('B', 'A', 'B', 'C')" },
+        { "name": "notIn", "signature": "notIn(needle, ...haystack)", "description": "Returns True if the left operand does not equal any right operand.", "example": "notIn('D', 'A', 'B', 'C')" }
+      ]
+    },
+    "logical": {
+      "title": "Logical Functions",
+      "functions": [
+        { "name": "and", "signature": "and(operand1, operand2, ...)", "description": "Returns True if all operands are True. Short-circuits on first False.", "example": "and(eq(1, 1), ne(2, 3))" },
+        { "name": "or", "signature": "or(operand1, operand2, ...)", "description": "Returns True if any operand is True. Short-circuits on first True.", "example": "or(eq(1, 2), eq(3, 3))" },
+        { "name": "not", "signature": "not(operand)", "description": "Returns True if the operand is False.", "example": "not(eq(1, 2))" },
+        { "name": "xor", "signature": "xor(operand1, operand2)", "description": "Returns True if exactly one operand is True.", "example": "xor(True, False)" }
+      ]
+    },
+    "string": {
+      "title": "String Functions",
+      "functions": [
+        { "name": "contains", "signature": "contains(string, substring)", "description": "Returns True if the string contains the substring. Ordinal ignore-case comparison.", "example": "contains('ABCDE', 'BCD')" },
+        { "name": "startsWith", "signature": "startsWith(string, prefix)", "description": "Returns True if the string starts with the prefix. Ordinal ignore-case.", "example": "startsWith('ABCDE', 'AB')" },
+        { "name": "endsWith", "signature": "endsWith(string, suffix)", "description": "Returns True if the string ends with the suffix. Ordinal ignore-case.", "example": "endsWith('ABCDE', 'DE')" },
+        { "name": "length", "signature": "length(string)", "description": "Returns the length of a string or an array.", "example": "length('ABCDE')" },
+        { "name": "lower", "signature": "lower(string)", "description": "Converts a string to lowercase.", "example": "lower('FOO')" },
+        { "name": "upper", "signature": "upper(string)", "description": "Converts a string to uppercase.", "example": "upper('foo')" },
+        { "name": "trim", "signature": "trim(string)", "description": "Removes leading and trailing whitespace.", "example": "trim(' Hello ')" },
+        { "name": "replace", "signature": "replace(string, oldSubstring, newSubstring)", "description": "Returns a new string with all instances of old substring replaced.", "example": "replace('Hello World', 'World', 'Pipelines')" }
+      ]
+    },
+    "collection": {
+      "title": "Collection Functions",
+      "functions": [
+        { "name": "split", "signature": "split(string, delimiter)", "description": "Splits a string into an array of substrings by delimiter.", "example": "split('a;b;c', ';')" },
+        { "name": "join", "signature": "join(array, delimiter)", "description": "Concatenates array elements with a delimiter.", "example": "join(variables.tags, ',')" },
+        { "name": "containsValue", "signature": "containsValue(collection, value)", "description": "Returns True if the array or object contains the value. Ordinal ignore-case for strings.", "example": "containsValue(variables, 'test')" },
+        { "name": "convertToJson", "signature": "convertToJson(value)", "description": "Converts a complex object to a JSON string.", "example": "convertToJson(pipeline.workspace)" }
+      ]
+    },
+    "utility": {
+      "title": "Utility Functions",
+      "functions": [
+        { "name": "coalesce", "signature": "coalesce(operand1, operand2, ...)", "description": "Returns the first non-null, non-empty-string operand.", "example": "coalesce(variables.myVar, 'default')" },
+        { "name": "format", "signature": "format(formatString, ...args)", "description": "Formats a string. Use {N} for positional replacement. Supports .NET date formatting.", "example": "format('Hello {0} {1}', 'world', 42)" },
+        { "name": "counter", "signature": "counter(prefix, seed)", "description": "Returns an auto-incrementing integer. Unique per pipeline definition, reset by prefix change.", "example": "counter(variables['Build.SourceBranchName'], 0)" },
+        { "name": "iif", "signature": "iif(condition, trueValue, falseValue)", "description": "If-then-else ternary. Returns trueValue if condition is True, otherwise falseValue.", "example": "iif(eq(variables['Build.Reason'], 'PullRequest'), 'PR', 'CI')" }
+      ]
+    },
+    "status_check": {
+      "title": "Job Status Check Functions",
+      "description": "Used only in conditions (not in variable definitions). Evaluate the status of the current job or previous stages/jobs.",
+      "functions": [
+        { "name": "always", "signature": "always()", "description": "Always evaluates to True, even when canceled. Useful for cleanup steps.", "example": "condition: always()" },
+        { "name": "canceled", "signature": "canceled()", "description": "Returns True if the pipeline was canceled.", "example": "condition: canceled()" },
+        { "name": "failed", "signature": "failed()", "description": "Returns True if any previous step or job failed. Can specify job/stage names to check.", "example": "condition: failed()" },
+        { "name": "succeeded", "signature": "succeeded()", "description": "Returns True if all previous steps/jobs succeeded (or were skipped with succeededOrFailed). Default condition.", "example": "condition: succeeded()" },
+        { "name": "succeededOrFailed", "signature": "succeededOrFailed()", "description": "Like always(), but returns False when canceled.", "example": "condition: succeededOrFailed()" }
+      ]
+    },
+    "conditional": {
+      "title": "Conditional Expressions",
+      "description": "Template-level conditional logic for compile-time evaluation.",
+      "syntax": [
+        {
+          "type": "if / elseif / else",
+          "example": "${{ if eq(variables['Build.SourceBranchName'], 'main') }}:\n  stageName: prod\n${{ elseif eq(variables['Build.SourceBranchName'], 'develop') }}:\n  stageName: staging\n${{ else }}:\n  stageName: dev",
+          "description": "Conditional insertion of YAML content at compile time."
+        },
+        {
+          "type": "each",
+          "example": "- ${{ each value in parameters.environments }}:\n  - stage: deploy_${{ value }}\n    displayName: Deploy to ${{ value }}",
+          "description": "Iterates over an object or array parameter."
+        }
+      ]
+    },
+    "type_conversion": {
+      "title": "Type Conversion Rules",
+      "description": "Expressions implicitly convert types when comparing. Understanding these rules prevents unexpected behavior.",
+      "rules": [
+        { "from": "Boolean", "to": "Number", "rule": "False → 0, True → 1" },
+        { "from": "Boolean", "to": "String", "rule": "False → 'False', True → 'True'" },
+        { "from": "Null", "to": "Boolean", "rule": "→ False" },
+        { "from": "Null", "to": "Number", "rule": "→ 0" },
+        { "from": "Null", "to": "String", "rule": "→ '' (empty)" },
+        { "from": "Number", "to": "Boolean", "rule": "0 → False, any other → True" },
+        { "from": "Number", "to": "String", "rule": "Decimal representation" },
+        { "from": "String", "to": "Boolean", "rule": "'' → False, any other → True" },
+        { "from": "String", "to": "Number", "rule": "Parsed as number or NaN" }
+      ]
+    }
+  },
+  "contexts": {
+    "dependencies": {
+      "description": "Access outputs from previous jobs or stages.",
+      "patterns": [
+        {
+          "scenario": "Job to Job (same stage)",
+          "syntax": "dependencies.jobName.outputs['stepName.variableName']",
+          "example": "condition: eq(dependencies.BuildJob.result, 'Succeeded')"
+        },
+        {
+          "scenario": "Stage to Stage",
+          "syntax": "stageDependencies.stageName.jobName.outputs['stepName.variableName']",
+          "example": "variables:\n  myVar: $[ stageDependencies.Build.BuildJob.outputs['setVar.myOutput'] ]"
+        }
+      ]
+    },
+    "filteredArrays": {
+      "description": "Extract a property from all objects in a collection.",
+      "syntax": "collection.*.property",
+      "example": "dependencies.*.result"
+    }
+  }
+}
