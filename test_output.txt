@@ -1,0 +1,69 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mD:/Repos/personals/azure-pipelines-mcp[39m
+
+ [31mΓ¥»[39m tests/services/http-client.test.ts [2m([22m[2m15 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 5786[2mms[22m[39m
+       [32mΓ£ô[39m returns response text on success[32m 14[2mms[22m[39m
+       [32mΓ£ô[39m caches successful response[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m skips cache when skipCache is true[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m retries on network error and succeeds[32m 106[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m throws after max retries [33m 324[2mms[22m[39m
+       [32mΓ£ô[39m does not retry on 404[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m throws NotFoundError on 404[32m 0[2mms[22m[39m
+[31m       [31m├ù[31m throws RateLimitError on 429[39m[33m 5016[2mms[22m[39m
+       [32mΓ£ô[39m throws RateLimitError with retryAfter value[32m 1[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m throws HttpClientError on other HTTP errors [33m 305[2mms[22m[39m
+[31m       [31m├ù[31m throws TimeoutError on timeout[39m[32m 17[2mms[22m[39m
+       [32mΓ£ô[39m invalidates cache for specific URL[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m clears entire cache[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m returns the same instance[32m 0[2mms[22m[39m
+       [32mΓ£ô[39m resets singleton correctly[32m 0[2mms[22m[39m
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ» Failed Tests 2 ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+
+ FAIL  tests/services/http-client.test.ts > HttpClient > error handling > throws RateLimitError on 429
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ Γ¥» tests/services/http-client.test.ts:119:3
+    117|   });
+    118| 
+    119|   it("throws RateLimitError on 429", async () => {
+       |   ^
+    120|    vi.spyOn(global, "fetch").mockResolvedValue(
+    121|     new Response("", {
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[1/2]ΓÄ»
+
+ FAIL  tests/services/http-client.test.ts > HttpClient > error handling > throws TimeoutError on timeout
+AssertionError: expected error to be instance of TimeoutError
+
+- Expected: 
+[Function TimeoutError]
+
++ Received: 
+HttpClientError {
+  "message": "Failed after 1 attempts: Request timeout after 10ms: https://example.com/slow",
+  "cause": TimeoutError {
+    "message": "Request timeout after 10ms: https://example.com/slow",
+    "url": "https://example.com/slow",
+    "name": "TimeoutError",
+  },
+  "url": "https://example.com/slow",
+  "name": "HttpClientError",
+}
+
+ Γ¥» tests/services/http-client.test.ts:192:4
+    190|    );
+    191| 
+    192|    await expect(
+       |    ^
+    193|     fastClient.fetch("https://example.com/slow")
+    194|    ).rejects.toThrow(TimeoutError);
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[2/2]ΓÄ»
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m13 passed[39m[22m[90m (15)[39m
+[2m   Start at [22m 20:56:39
+[2m   Duration [22m 5.95s[2m (transform 40ms, setup 0ms, import 52ms, tests 5.79s, environment 0ms)[22m
+

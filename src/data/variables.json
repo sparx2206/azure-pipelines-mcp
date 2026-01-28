@@ -1,0 +1,123 @@
+{
+  "description": "Azure Pipelines predefined variables reference. These variables are automatically set by the system and are read-only (except Build.Clean and System.Debug). In YAML pipelines, variable names become environment variables with uppercase names and dots replaced by underscores (e.g. Build.SourceBranch → BUILD_SOURCEBRANCH).",
+  "categories": {
+    "agent": {
+      "title": "Agent Variables",
+      "description": "Variables related to the build/release agent.",
+      "variables": [
+        { "name": "Agent.BuildDirectory", "description": "Local path on the agent where all folders for a given build pipeline are created.", "example": "D:\\a\\1" },
+        { "name": "Agent.ContainerMapping", "description": "A mapping from container resource names in the pipeline to their Docker IDs at runtime." },
+        { "name": "Agent.HomeDirectory", "description": "The directory the agent is installed into.", "example": "C:\\agents\\2.206.1" },
+        { "name": "Agent.Id", "description": "The ID of the agent." },
+        { "name": "Agent.JobName", "description": "The name of the running job (e.g. 'Job' or '__default')." },
+        { "name": "Agent.JobStatus", "description": "The status of the build. Succeeded, SucceededWithIssues, Failed, Canceled, Skipped." },
+        { "name": "Agent.MachineName", "description": "The name of the machine on which the agent is installed." },
+        { "name": "Agent.Name", "description": "The name of the agent as registered with the pool." },
+        { "name": "Agent.OS", "description": "The operating system of the agent host. Windows_NT, Darwin, or Linux." },
+        { "name": "Agent.OSArchitecture", "description": "The operating system processor architecture of the agent host. X86, X64, or ARM." },
+        { "name": "Agent.TempDirectory", "description": "A temporary folder that is cleaned after each pipeline job." },
+        { "name": "Agent.ToolsDirectory", "description": "The directory used by tasks such as Node Tool Installer and Use Python Version." },
+        { "name": "Agent.WorkFolder", "description": "The working directory for this agent." }
+      ]
+    },
+    "build": {
+      "title": "Build Variables",
+      "description": "Variables containing information about the build.",
+      "variables": [
+        { "name": "Build.ArtifactStagingDirectory", "description": "Local path on the agent for storing artifacts before publishing. Cleaned before each build.", "example": "D:\\a\\1\\a" },
+        { "name": "Build.BuildId", "description": "The ID of the record for the completed build." },
+        { "name": "Build.BuildNumber", "description": "The name of the completed build (run number). You can specify the format in pipeline options." },
+        { "name": "Build.BuildUri", "description": "The URI for the build. E.g. vstfs:///Build/Build/1430." },
+        { "name": "Build.BinariesDirectory", "description": "Local path on the agent for creating output binaries.", "example": "D:\\a\\1\\b" },
+        { "name": "Build.ContainerId", "description": "The ID of the container for your artifact." },
+        { "name": "Build.CronSchedule.DisplayName", "description": "The displayName of the cron schedule that triggered the pipeline run." },
+        { "name": "Build.DefinitionName", "description": "The name of the build pipeline." },
+        { "name": "Build.DefinitionVersion", "description": "The version of the build pipeline." },
+        { "name": "Build.QueuedBy", "description": "The display name of the identity that queued the build. Trigger-dependent." },
+        { "name": "Build.QueuedById", "description": "The ID of the identity that queued the build." },
+        { "name": "Build.Reason", "description": "The event that caused the build: Manual, IndividualCI, BatchedCI, Schedule, ValidateShelveset, CheckInShelveset, PullRequest, BuildCompletion, ResourceTrigger." },
+        { "name": "Build.Repository.Clean", "description": "The value you've selected for Clean in the source repository settings." },
+        { "name": "Build.Repository.Id", "description": "The unique identifier of the repository." },
+        { "name": "Build.Repository.LocalPath", "description": "Local path on the agent where source code files are downloaded. Alias: Build.SourcesDirectory.", "example": "D:\\a\\1\\s" },
+        { "name": "Build.Repository.Name", "description": "The name of the triggering repository." },
+        { "name": "Build.Repository.Provider", "description": "The type of repository: TfsGit, TfsVersionControl, Git, GitHub, Svn." },
+        { "name": "Build.Repository.Uri", "description": "The URL for the triggering repository." },
+        { "name": "Build.RequestedFor", "description": "The display name of the identity that triggered (requested) the build." },
+        { "name": "Build.RequestedForEmail", "description": "The email of the identity that triggered the build." },
+        { "name": "Build.RequestedForId", "description": "The ID of the identity that triggered the build." },
+        { "name": "Build.SourceBranch", "description": "The branch that triggered the build. For pull requests, this is the merge branch.", "example": "refs/heads/main" },
+        { "name": "Build.SourceBranchName", "description": "The name of the branch (last path segment). For refs/heads/main → main.", "example": "main" },
+        { "name": "Build.SourceVersion", "description": "The latest version control change (commit SHA) included in this build." },
+        { "name": "Build.SourceVersionMessage", "description": "The comment of the commit that triggered the build. Truncated to first line." },
+        { "name": "Build.SourcesDirectory", "description": "Local path on the agent where source code files are downloaded.", "example": "D:\\a\\1\\s" },
+        { "name": "Build.StagingDirectory", "description": "Alias for Build.ArtifactStagingDirectory." },
+        { "name": "Build.TriggeredBy.BuildId", "description": "If the build was triggered by another build, the BuildId of the triggering build." },
+        { "name": "Build.TriggeredBy.DefinitionId", "description": "If the build was triggered by another build, the DefinitionId of the triggering build." },
+        { "name": "Build.TriggeredBy.DefinitionName", "description": "If the build was triggered by another build, the name of the triggering build pipeline." },
+        { "name": "Build.TriggeredBy.BuildNumber", "description": "If the build was triggered by another build, the number of the triggering build." },
+        { "name": "Build.TriggeredBy.ProjectID", "description": "If the build was triggered by another build, the ID of the project that contains the triggering build." }
+      ]
+    },
+    "system": {
+      "title": "System Variables",
+      "description": "Core system-level variables.",
+      "variables": [
+        { "name": "System.AccessToken", "description": "OAuth token to access the Azure DevOps REST API. Use $(System.AccessToken) in scripts. Must be explicitly mapped.", "example": "Use `env: SYSTEM_ACCESSTOKEN: $(System.AccessToken)` in YAML." },
+        { "name": "System.CollectionId", "description": "The GUID of the TFS collection or Azure DevOps organization." },
+        { "name": "System.CollectionUri", "description": "The URI of the TFS collection or Azure DevOps organization.", "example": "https://dev.azure.com/myorg/" },
+        { "name": "System.Debug", "description": "Set to 'true' to enable verbose logging. This is the only settable system variable." },
+        { "name": "System.DefaultWorkingDirectory", "description": "Local path on the agent where source code files are downloaded.", "example": "D:\\a\\1\\s" },
+        { "name": "System.DefinitionId", "description": "The ID of the build pipeline." },
+        { "name": "System.HostType", "description": "Whether the pipeline is running as a build or a release: build, deployment, release." },
+        { "name": "System.IsScheduled", "description": "True if the build was triggered by a schedule." },
+        { "name": "System.JobAttempt", "description": "Set to 1 the first time a job is attempted, increments each time the job is retried." },
+        { "name": "System.JobDisplayName", "description": "The human-readable name of the current job." },
+        { "name": "System.JobId", "description": "A unique identifier for a single attempt of a single job." },
+        { "name": "System.JobName", "description": "The name of the job, typically used for expressing dependencies." },
+        { "name": "System.PhaseAttempt", "description": "Set to 1 the first time a phase is attempted, increments on retry." },
+        { "name": "System.PhaseName", "description": "The name of the phase." },
+        { "name": "System.PlanId", "description": "An internal identifier for a pipeline run." },
+        { "name": "System.PullRequest.IsFork", "description": "True if the pull request is from a fork of the repository." },
+        { "name": "System.PullRequest.PullRequestId", "description": "The ID of the pull request (Azure Repos)." },
+        { "name": "System.PullRequest.PullRequestNumber", "description": "The number of the pull request (GitHub)." },
+        { "name": "System.PullRequest.SourceBranch", "description": "The source branch of the pull request." },
+        { "name": "System.PullRequest.SourceRepositoryURI", "description": "The URL of the source repository for the pull request." },
+        { "name": "System.PullRequest.TargetBranch", "description": "The target branch of the pull request." },
+        { "name": "System.PullRequest.TargetBranchName", "description": "The short name (last segment) of the target branch." },
+        { "name": "System.StageAttempt", "description": "Set to 1 the first time a stage is attempted, increments on retry." },
+        { "name": "System.StageDisplayName", "description": "The human-readable name of the current stage." },
+        { "name": "System.StageName", "description": "The name of the stage." },
+        { "name": "System.TeamFoundationCollectionUri", "description": "The URI of the TFS collection or Azure DevOps organization. Alias for System.CollectionUri." },
+        { "name": "System.TeamProject", "description": "The name of the project." },
+        { "name": "System.TeamProjectId", "description": "The ID of the project." },
+        { "name": "System.TimelineId", "description": "An internal identifier for the timeline of the pipeline run." }
+      ]
+    },
+    "pipeline": {
+      "title": "Pipeline Variables",
+      "description": "Variables related to the pipeline workspace.",
+      "variables": [
+        { "name": "Pipeline.Workspace", "description": "Workspace directory for a particular pipeline. Same as Agent.BuildDirectory.", "example": "D:\\a\\1" }
+      ]
+    },
+    "deployment": {
+      "title": "Deployment Job Variables",
+      "description": "Variables available in deployment jobs.",
+      "variables": [
+        { "name": "Environment.Name", "description": "Name of the environment targeted in the deployment job.", "example": "smarthotel-dev" },
+        { "name": "Environment.Id", "description": "ID of the environment targeted in the deployment job." },
+        { "name": "Environment.ResourceName", "description": "Name of the specific resource within the environment targeted." },
+        { "name": "Environment.ResourceId", "description": "ID of the specific resource within the environment targeted." },
+        { "name": "Strategy.Name", "description": "Name of the deployment strategy: canary, runOnce, or rolling." },
+        { "name": "Strategy.CycleName", "description": "The current cycle name: PreIteration, Iteration, or PostIteration." }
+      ]
+    },
+    "checks": {
+      "title": "Checks Variables",
+      "description": "Variables for approval and check conditions.",
+      "variables": [
+        { "name": "Checks.StageAttempt", "description": "Set to 1 the first time a stage is attempted. Incremented each time a stage is retried. Use in approval and check conditions." }
+      ]
+    }
+  }
+}
