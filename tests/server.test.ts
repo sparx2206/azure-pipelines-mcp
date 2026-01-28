@@ -3,6 +3,15 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../src/server.js";
 
+interface TextContent {
+	type: "text";
+	text: string;
+}
+
+interface ToolResult {
+	content: TextContent[];
+}
+
 describe("MCP Server", () => {
 	async function createConnectedClient(): Promise<Client> {
 		const server = createServer();
@@ -42,10 +51,10 @@ describe("MCP Server", () => {
 
 	it("can call get_expressions_reference without arguments", async () => {
 		const client = await createConnectedClient();
-		const result = await client.callTool({
+		const result = (await client.callTool({
 			name: "get_expressions_reference",
 			arguments: {},
-		});
+		})) as ToolResult;
 
 		expect(result.content).toBeInstanceOf(Array);
 		expect(result.content).toHaveLength(1);
@@ -59,10 +68,10 @@ describe("MCP Server", () => {
 
 	it("can call get_predefined_variables without arguments", async () => {
 		const client = await createConnectedClient();
-		const result = await client.callTool({
+		const result = (await client.callTool({
 			name: "get_predefined_variables",
 			arguments: {},
-		});
+		})) as ToolResult;
 
 		expect(result.content).toBeInstanceOf(Array);
 		const textContent = result.content[0] as { type: string; text: string };
@@ -72,10 +81,10 @@ describe("MCP Server", () => {
 
 	it("can call get_yaml_schema without arguments", async () => {
 		const client = await createConnectedClient();
-		const result = await client.callTool({
+		const result = (await client.callTool({
 			name: "get_yaml_schema",
 			arguments: {},
-		});
+		})) as ToolResult;
 
 		expect(result.content).toBeInstanceOf(Array);
 		const textContent = result.content[0] as { type: string; text: string };
@@ -85,10 +94,10 @@ describe("MCP Server", () => {
 
 	it("can call get_expressions_reference with category argument", async () => {
 		const client = await createConnectedClient();
-		const result = await client.callTool({
+		const result = (await client.callTool({
 			name: "get_expressions_reference",
 			arguments: { category: "comparison" },
-		});
+		})) as ToolResult;
 
 		const textContent = result.content[0] as { type: string; text: string };
 		const parsed = JSON.parse(textContent.text);
@@ -98,10 +107,10 @@ describe("MCP Server", () => {
 
 	it("can call get_predefined_variables with category argument", async () => {
 		const client = await createConnectedClient();
-		const result = await client.callTool({
+		const result = (await client.callTool({
 			name: "get_predefined_variables",
 			arguments: { category: "build" },
-		});
+		})) as ToolResult;
 
 		const textContent = result.content[0] as { type: string; text: string };
 		const parsed = JSON.parse(textContent.text);
@@ -111,10 +120,10 @@ describe("MCP Server", () => {
 
 	it("can call get_yaml_schema with element argument", async () => {
 		const client = await createConnectedClient();
-		const result = await client.callTool({
+		const result = (await client.callTool({
 			name: "get_yaml_schema",
 			arguments: { element: "steps" },
-		});
+		})) as ToolResult;
 
 		const textContent = result.content[0] as { type: string; text: string };
 		const parsed = JSON.parse(textContent.text);
@@ -124,10 +133,10 @@ describe("MCP Server", () => {
 
 	it("can call search_pipeline_tasks with query argument", async () => {
 		const client = await createConnectedClient();
-		const result = await client.callTool({
+		const result = (await client.callTool({
 			name: "search_pipeline_tasks",
 			arguments: { query: "dotnet" },
-		});
+		})) as ToolResult;
 
 		expect(result.content).toBeInstanceOf(Array);
 		const textContent = result.content[0] as { type: string; text: string };
