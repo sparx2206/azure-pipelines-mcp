@@ -2,60 +2,65 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Projekt
+## Project
 
-MCP server pro Azure Pipelines YAML authoring — validace, task reference, expressions, proměnné a YAML schema. Distribuován přes npm/npx, kompatibilní se všemi MCP klienty (Claude, Gemini, GitHub Copilot, Cursor, VS Code aj.).
+MCP server for Azure Pipelines YAML authoring — validation, task reference, expressions, variables, and YAML schema. Distributed via npm/npx, compatible with all MCP clients (Claude, Gemini, GitHub Copilot, Cursor, VS Code, etc.).
 
-## Příkazy
+## Commands
 
 ```bash
-npm run build        # TypeScript kompilace (tsc → dist/)
-npm test             # Spuštění všech testů (vitest run)
-npm run test:watch   # Testy ve watch módu
-npx vitest run tests/tools/expressions.test.ts  # Jeden testovací soubor
-npm run lint         # ESLint kontrola
-npm run lint:fix     # ESLint s auto-fix
-npm run format       # Prettier formátování
-npm run inspect      # Build + spuštění MCP Inspector pro lokální testování
+npm run build        # TypeScript compilation (tsc → dist/)
+npm test             # Run all tests (vitest run)
+npm run test:watch   # Tests in watch mode
+npx vitest run tests/tools/expressions.test.ts  # Single test file
+npm run lint         # ESLint check
+npm run lint:fix     # ESLint with auto-fix
+npm run format       # Prettier formatting
+npm run inspect      # Build + run MCP Inspector for local testing
 ```
 
-## Architektura
+## Architecture
 
 ```
 src/
-  index.ts          — Entry point (shebang, stdio transport, spuštění serveru)
-  server.ts         — McpServer instance, registrace všech tools
-  tools/            — Jednotlivé MCP tools (jeden soubor = jeden tool)
-  data/             — Embedded JSON datasety (expressions, variables, schema)
+  index.ts          — Entry point (shebang, stdio transport, server startup)
+  server.ts         — McpServer instance, registers all tools
+  tools/            — Individual MCP tools (one file = one tool)
+  services/         — Shared services (HTTP client, cache)
+  data/             — Embedded JSON datasets (expressions, variables, schema)
 tests/
-  tools/            — Unit testy pro tool handlery
-  server.test.ts    — Integrační test registrace tools přes MCP Client
+  tools/            — Unit tests for tool handlers
+  services/         — Unit tests for shared services
+  server.test.ts    — Integration test for tool registration via MCP Client
 ```
 
-**Transport:** stdio (standardní pro npx-distribuované MCP servery).
+**Transport:** stdio (standard for npx-distributed MCP servers).
 
-**Datové zdroje:** Embedded JSON datasety v `src/data/` pro stabilní reference (expressions, variables, schema). Budoucí tools (task reference, validace) budou používat runtime fetch z GitHub/Azure DevOps API.
+**Data sources:** Embedded JSON datasets in `src/data/` for stable references (expressions, variables, schema). Runtime tools (task reference, search) fetch from GitHub raw content (`MicrosoftDocs/azure-devops-yaml-schema`). Future validation tool will use Azure DevOps REST API.
 
-## Přidání nového toolu
+## Adding a new tool
 
-1. Vytvořit `src/tools/novy-tool.ts` — exportovat handler funkci a `registerXxxTools(server)` funkci
-2. V `src/server.ts` importovat a zavolat registrační funkci
-3. Přidat testy do `tests/tools/novy-tool.test.ts`
-4. Přidat integrační test do `tests/server.test.ts`
+1. Create `src/tools/new-tool.ts` — export handler function and `registerXxxTools(server)` function
+2. In `src/server.ts` import and call the registration function
+3. Add tests to `tests/tools/new-tool.test.ts`
+4. Add integration test to `tests/server.test.ts`
 
-Každý tool handler vrací `{ content: [{ type: "text", text: JSON.stringify(...) }] }`.
+Each tool handler returns `{ content: [{ type: "text", text: JSON.stringify(...) }] }`.
 
-## Konfigurace (env proměnné)
+## Configuration (env variables)
 
-Zatím žádné — budou přidány ve Fázi 3 (validace přes Azure DevOps API):
-- `AZURE_DEVOPS_ORG` — název organizace
+None yet — will be added in Phase 3 (validation via Azure DevOps API):
+
+- `AZURE_DEVOPS_ORG` — organization name
 - `AZURE_DEVOPS_PAT` — Personal Access Token
-- `AZURE_DEVOPS_PROJECT` — název projektu
+- `AZURE_DEVOPS_PROJECT` — project name
 
-## Konvence
+## Conventions
 
-- ESM modul (`"type": "module"` v package.json)
-- Import s `.js` příponami (TypeScript ESM requirement)
-- JSON importy s `with { type: "json" }` atributem
-- `console.error()` pro logování (nikdy `console.log` — narušuje stdio MCP protokol)
-- Zod pro validaci vstupních schémat tools
+- ESM module (`"type": "module"` in package.json)
+- Imports with `.js` extensions (TypeScript ESM requirement)
+- JSON imports with `with { type: "json" }` attribute
+- `console.error()` for logging (never `console.log` — breaks stdio MCP protocol)
+- Zod for tool input schema validation
+- Git commit messages and GitHub issues in **English**
+- Follow branch naming convention: `features/*`
