@@ -7,7 +7,7 @@ import { z } from "zod";
 import { getDefaultHttpClient, NotFoundError } from "../services/http-client.js";
 
 // URL pro index.md s task referencí
-const TASK_INDEX_URL =
+export const TASK_INDEX_URL =
 	"https://raw.githubusercontent.com/MicrosoftDocs/azure-devops-yaml-schema/main/task-reference/index.md";
 
 // Kategorie tasků

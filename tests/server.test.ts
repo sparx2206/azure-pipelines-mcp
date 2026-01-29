@@ -36,7 +36,8 @@ describe("MCP Server", () => {
 		expect(toolNames).toContain("get_predefined_variables");
 		expect(toolNames).toContain("get_yaml_schema");
 		expect(toolNames).toContain("search_pipeline_tasks");
-		expect(toolNames).toHaveLength(4);
+		expect(toolNames).toContain("get_task_reference");
+		expect(toolNames).toHaveLength(5);
 	});
 
 	it("each tool has a description", async () => {
@@ -143,5 +144,18 @@ describe("MCP Server", () => {
 		const parsed = JSON.parse(textContent.text);
 		expect(parsed.query).toBe("dotnet");
 		expect(parsed.tasks).toBeInstanceOf(Array);
+	});
+
+	it("can call get_task_reference with invalid task format", async () => {
+		const client = await createConnectedClient();
+		const result = (await client.callTool({
+			name: "get_task_reference",
+			arguments: { taskName: "invalid" },
+		})) as ToolResult;
+
+		expect(result.content).toBeInstanceOf(Array);
+		const textContent = result.content[0] as { type: string; text: string };
+		const parsed = JSON.parse(textContent.text);
+		expect(parsed.error).toContain("Invalid task format");
 	});
 });

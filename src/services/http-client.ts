@@ -20,6 +20,8 @@ export interface HttpClientOptions {
 export interface FetchOptions {
 	/** Přeskočit cache a vynutit nový požadavek */
 	skipCache?: boolean;
+	/** Override TTL pro cache v ms (přepíše výchozí TTL klienta) */
+	cacheTtlMs?: number;
 }
 
 const DEFAULT_TIMEOUT = 10000;
@@ -105,7 +107,7 @@ export class HttpClient {
 		const response = await this.fetchWithRetry(url);
 
 		// Uložíme do cache
-		this.cache.set(url, response, this.cacheTtlMs);
+		this.cache.set(url, response, options.cacheTtlMs ?? this.cacheTtlMs);
 
 		return response;
 	}
