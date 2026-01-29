@@ -18,13 +18,41 @@
       "description": "A stage is a collection of related jobs. By default, stages run sequentially. Use dependsOn for custom ordering or parallel execution.",
       "syntax": "stages:\n- stage: string\n  displayName: string\n  dependsOn: string | [ string ]\n  condition: string\n  pool: pool\n  variables: variables\n  jobs: [ job ]\n  lockBehavior: sequential | runLatest\n  templateContext: object",
       "properties": [
-        { "name": "stage", "type": "string", "description": "Stage identifier (A-Z, a-z, 0-9, _, no spaces). Use 'stage:' for pipeline stage, '- template:' for template stage." },
-        { "name": "displayName", "type": "string", "description": "Human-readable name shown in the UI." },
-        { "name": "dependsOn", "type": "string | string[]", "description": "Stages that must complete before this stage runs. Empty for no dependencies." },
-        { "name": "condition", "type": "string", "description": "Expression to evaluate whether to run. Default: succeeded()." },
-        { "name": "pool", "type": "pool", "description": "Pool to use for jobs in this stage (can be overridden per job)." },
-        { "name": "variables", "type": "variables", "description": "Stage-scoped variables." },
-        { "name": "jobs", "type": "job[]", "description": "Jobs that make up this stage." }
+        {
+          "name": "stage",
+          "type": "string",
+          "description": "Stage identifier (A-Z, a-z, 0-9, _, no spaces). Use 'stage:' for pipeline stage, '- template:' for template stage."
+        },
+        {
+          "name": "displayName",
+          "type": "string",
+          "description": "Human-readable name shown in the UI."
+        },
+        {
+          "name": "dependsOn",
+          "type": "string | string[]",
+          "description": "Stages that must complete before this stage runs. Empty for no dependencies."
+        },
+        {
+          "name": "condition",
+          "type": "string",
+          "description": "Expression to evaluate whether to run. Default: succeeded()."
+        },
+        {
+          "name": "pool",
+          "type": "pool",
+          "description": "Pool to use for jobs in this stage (can be overridden per job)."
+        },
+        {
+          "name": "variables",
+          "type": "variables",
+          "description": "Stage-scoped variables."
+        },
+        {
+          "name": "jobs",
+          "type": "job[]",
+          "description": "Jobs that make up this stage."
+        }
       ],
       "example": "stages:\n- stage: Build\n  displayName: 'Build stage'\n  jobs:\n  - job: BuildJob\n    steps:\n    - script: echo Building\n\n- stage: Deploy\n  displayName: 'Deploy stage'\n  dependsOn: Build\n  condition: succeeded()\n  jobs:\n  - deployment: DeployWeb\n    environment: production"
     },
@@ -120,7 +148,20 @@
       "title": "Parameters",
       "description": "Runtime parameters that can be provided when manually running a pipeline.",
       "syntax": "parameters:\n- name: string\n  type: string\n  displayName: string\n  default: any\n  values: [ string ]",
-      "types": ["string", "number", "boolean", "object", "step", "stepList", "job", "jobList", "deployment", "deploymentList", "stage", "stageList"],
+      "types": [
+        "string",
+        "number",
+        "boolean",
+        "object",
+        "step",
+        "stepList",
+        "job",
+        "jobList",
+        "deployment",
+        "deploymentList",
+        "stage",
+        "stageList"
+      ],
       "example": "parameters:\n- name: environment\n  type: string\n  displayName: 'Target environment'\n  default: 'dev'\n  values:\n  - dev\n  - staging\n  - production"
     },
     "variables": {
