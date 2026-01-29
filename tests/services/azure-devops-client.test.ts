@@ -58,7 +58,7 @@ describe("AzureDevOpsClient", () => {
 
 		expect(result).toEqual({ value: "success" });
 		expect(mockFetch).toHaveBeenCalledWith(
-			"https://dev.azure.com/test-org/test-project/builds",
+			"https://dev.azure.com/test-org/test-project/builds?api-version=7.1",
 			expect.objectContaining({
 				headers: expect.objectContaining({
 					Authorization: expect.stringContaining("Basic"),
@@ -84,7 +84,7 @@ describe("AzureDevOpsClient", () => {
 		await client.get("builds", { project: "dynamic-project" });
 
 		expect(mockFetch).toHaveBeenCalledWith(
-			"https://dev.azure.com/test-org/dynamic-project/builds",
+			"https://dev.azure.com/test-org/dynamic-project/builds?api-version=7.1",
 			expect.any(Object)
 		);
 	});
@@ -109,7 +109,7 @@ describe("AzureDevOpsClient", () => {
 
 		expect(result).toEqual({ success: true });
 		expect(mockFetch).toHaveBeenCalledWith(
-			"https://dev.azure.com/test-org/my-project/pipelines/1/runs",
+			"https://dev.azure.com/test-org/my-project/pipelines/1/runs?api-version=7.1",
 			expect.objectContaining({
 				method: "POST",
 				body: JSON.stringify(body),

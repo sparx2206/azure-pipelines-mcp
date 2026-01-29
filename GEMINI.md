@@ -2,6 +2,16 @@
 
 This file provides guidance to Gemini CLI and Gemini Code Assist when working with code in this repository.
 
+## Conventions
+
+- ESM module (`"type": "module"` in package.json)
+- Imports with `.js` extensions (TypeScript ESM requirement)
+- JSON imports with `with { type: "json" }` attribute
+- `console.error()` for logging (never `console.log` — breaks stdio MCP protocol)
+- Zod for tool input schema validation
+- Git commit messages and Pull Requests and GitHub issues in **English**
+- Follow branch naming convention: `features/*`
+
 ## Project
 
 MCP server for Azure Pipelines YAML authoring — validation, task reference, expressions, variables, and YAML schema. Distributed via npm/npx, compatible with all MCP clients (Claude, Gemini, GitHub Copilot, Cursor, VS Code, etc.).
@@ -54,13 +64,3 @@ None yet — will be added in Phase 3 (validation via Azure DevOps API):
 - `AZURE_DEVOPS_ORG` — organization name
 - `AZURE_DEVOPS_PAT` — Personal Access Token
 - `AZURE_DEVOPS_PROJECT` — project name
-
-## Conventions
-
-- ESM module (`"type": "module"` in package.json)
-- Imports with `.js` extensions (TypeScript ESM requirement)
-- JSON imports with `with { type: "json" }` attribute
-- `console.error()` for logging (never `console.log` — breaks stdio MCP protocol)
-- Zod for tool input schema validation
-- Git commit messages and GitHub issues in **English**
-- Follow branch naming convention: `features/*`

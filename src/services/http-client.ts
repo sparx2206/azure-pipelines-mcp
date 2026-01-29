@@ -22,7 +22,11 @@ export interface FetchOptions {
 	skipCache?: boolean;
 	/** Override TTL pro cache v ms (přepíše výchozí TTL klienta) */
 	cacheTtlMs?: number;
-	/** Vlastní hlavičky požadavku */
+	/**
+	 * Vlastní hlavičky požadavku.
+	 * POZOR: Tyto hlavičky přepíšou výchozí hlavičky (např. Accept, User-Agent),
+	 * pokud mají stejný klíč.
+	 */
 	headers?: Record<string, string>;
 }
 
@@ -79,7 +83,7 @@ export class TimeoutError extends HttpClientError {
 }
 
 export class HttpClient {
-	private timeout: number;
+	protected timeout: number;
 	private retries: number;
 	private retryDelay: number;
 	private cacheTtlMs: number;

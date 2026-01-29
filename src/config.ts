@@ -29,10 +29,6 @@ const envSchema = z.object({
  * @throws {z.ZodError} Pokud konfigurace není validní.
  */
 export function loadConfig(): Config {
-	// Pokud běžíme v testech nebo nepotřebujeme validovat hned při importu,
-	// můžeme volání přesunout nebo ošetřit.
-	// Zde předpokládáme direct access k process.env.
-
 	const env = envSchema.parse(process.env);
 
 	return {

@@ -4,6 +4,7 @@ import { registerVariablesTools } from "./tools/variables.js";
 import { registerYamlSchemaTools } from "./tools/yaml-schema.js";
 import { registerSearchTasksTools } from "./tools/search-tasks.js";
 import { registerTaskReferenceTools } from "./tools/task-reference.js";
+import { registerValidatePipelineTools } from "./tools/validate-pipeline.js";
 
 export function createServer(): McpServer {
 	const server = new McpServer({
@@ -16,6 +17,7 @@ export function createServer(): McpServer {
 	registerYamlSchemaTools(server);
 	registerSearchTasksTools(server);
 	registerTaskReferenceTools(server);
+	registerValidatePipelineTools(server);
 
 	return server;
 }

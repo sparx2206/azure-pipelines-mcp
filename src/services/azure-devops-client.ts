@@ -50,11 +50,23 @@ export class AzureDevOpsClient extends HttpClient {
 	private buildUrl(endpoint: string, projectOverride?: string): string {
 		const proj = projectOverride ?? this.project;
 		const baseUrl = `https://dev.azure.com/${this.org}`;
+		const normalizedEndpoint = endpoint.trim().replace(/^\/+/, "");
+		const apiVersion = "7.1";
 
+		let url: string;
 		if (proj) {
-			return `${baseUrl}/${proj}/${endpoint}`;
+			url = `${baseUrl}/${proj}/${normalizedEndpoint}`;
+		} else {
+			url = `${baseUrl}/${normalizedEndpoint}`;
 		}
-		return `${baseUrl}/${endpoint}`;
+
+		// Skip if api-version already present
+		if (/[?&]api-version=/.test(url)) {
+			return url;
+		}
+
+		const separator = url.includes("?") ? "&" : "?";
+		return `${url}${separator}api-version=${apiVersion}`;
 	}
 
 	/**
@@ -84,33 +96,28 @@ export class AzureDevOpsClient extends HttpClient {
 	}
 
 	/**
-	 * Provede POST požadavek na Azure DevOps API (momentálně není plně implementováno v HttpClientu metody,
-	 * HttpClient je primárně pro GET. Pro POST budeme muset rozšířit HttpClient nebo použít fetch přímo).
+	 * Performs a POST request to Azure DevOps API.
 	 *
-	 * Vzhledem k tomu, že Base HttpClient je navržen pro GET (caching atd.),
-	 * bude lepší pro POST použít přímo fetch uvnitř této třídy,
-	 * nebo rozšířit Base HttpClient o metodu request().
-	 *
-	 * Pro tento úkol (Issue #5) zatím stačí základ pro GET, ale pro Issue #4 budeme potřebovat POST.
-	 * Rozšířím Base HttpClient o metodu `post` nebo obecnou `request`.
-	 *
-	 * Jelikož HttpClient je nyní "jen" wrapper kolem fetch s retry a cache pro GET,
-	 * přidám sem prozatím specifickou implementaci POST.
+	 * NOTE: No automatic retry for POST requests because they are not idempotent.
+	 * Retrying a non-idempotent operation could cause duplicate side-effects
+	 * (e.g., creating multiple pipelines, triggering multiple builds).
+	 * Callers should implement their own retry logic if needed for specific endpoints.
 	 */
 	async post<T>(
 		endpoint: string,
 		body: unknown,
 		options: { project?: string } = {}
 	): Promise<T> {
-		// TODO: Implementovat retry logiku pro POST?
-		// Pro POST většinou nechceme automatický retry u všech chyb (není idempotentní).
-		// Prozatím jednoduchá implementace s fetch.
 
 		const url = this.buildUrl(endpoint, options.project);
 		const headers = this.getHeaders();
 		const controller = new AbortController();
-		// Timeout 10s
-		const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+		// Use configured timeout or default 10s
+		const timeoutId = setTimeout(
+			() => controller.abort(),
+			this.timeout ?? 10000
+		);
 
 		try {
 			const response = await fetch(url, {
