@@ -3,6 +3,7 @@ import { registerExpressionsTools } from "./tools/expressions.js";
 import { registerVariablesTools } from "./tools/variables.js";
 import { registerYamlSchemaTools } from "./tools/yaml-schema.js";
 import { registerSearchTasksTools } from "./tools/search-tasks.js";
+import { registerTaskReferenceTools } from "./tools/task-reference.js";
 
 export function createServer(): McpServer {
 	const server = new McpServer({
@@ -14,6 +15,7 @@ export function createServer(): McpServer {
 	registerVariablesTools(server);
 	registerYamlSchemaTools(server);
 	registerSearchTasksTools(server);
+	registerTaskReferenceTools(server);
 
 	return server;
 }
