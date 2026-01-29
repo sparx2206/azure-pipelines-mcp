@@ -55,7 +55,7 @@ const CATEGORY_MAPPING: Record<string, TaskCategory> = {
  * Parsuje index.md a extrahuje seznam tasků.
  */
 export function parseTaskIndex(markdown: string): PipelineTask[] {
-	const tasks: PipelineTask[] = [];
+	const tasksMap = new Map<string, PipelineTask>();
 	let currentCategory: TaskCategory | null = null;
 
 	const lines = markdown.split("\n");
@@ -95,20 +95,23 @@ export function parseTaskIndex(markdown: string): PipelineTask[] {
 			if (nameVersionMatch) {
 				const [, name, version] = nameVersionMatch;
 
-				tasks.push({
-					name,
-					displayName,
-					version,
-					fullName,
-					description,
-					category: currentCategory,
-					documentationPath: docPath,
-				});
+				const key = `${fullName}-${currentCategory}`;
+				if (!tasksMap.has(key)) {
+					tasksMap.set(key, {
+						name,
+						displayName,
+						version,
+						fullName,
+						description,
+						category: currentCategory,
+						documentationPath: docPath,
+					});
+				}
 			}
 		}
 	}
 
-	return tasks;
+	return Array.from(tasksMap.values());
 }
 
 /**

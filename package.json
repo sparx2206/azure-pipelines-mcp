@@ -35,9 +35,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/petrbrada/azure-pipelines-mcp"
+    "url": "https://github.com/sparx2206/azure-pipelines-mcp"
   },
-  "dependencies": {
+  "deendencies": {
     "@modelcontextprotocol/sdk": "^1.25.3",
     "zod": "^4.3.6"
   },

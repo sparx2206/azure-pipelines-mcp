@@ -91,6 +91,25 @@ describe("parseTaskIndex", () => {
 		const tasks = parseTaskIndex("# Some other content\n\nNo tasks here.");
 		expect(tasks).toEqual([]);
 	});
+
+	it("deduplicates tasks when they appear multiple times", () => {
+		const DUPLICATE_MARKDOWN = `
+## Build tasks
+
+| Task | Description |
+|---|---|
+| **Bash**<br>[Bash@3](bash-v3.md) | Run a Bash script. |
+
+## Build tasks
+
+| Task | Description |
+|---|---|
+| **Bash**<br>[Bash@3](bash-v3.md) | Run a Bash script. |
+`;
+		const tasks = parseTaskIndex(DUPLICATE_MARKDOWN);
+		const bashTasks = tasks.filter(t => t.fullName === "Bash@3");
+		expect(bashTasks.length).toBe(1);
+	});
 });
 
 describe("searchTasks", () => {
