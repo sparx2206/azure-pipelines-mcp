@@ -50,11 +50,19 @@ export class AzureDevOpsClient extends HttpClient {
 	private buildUrl(endpoint: string, projectOverride?: string): string {
 		const proj = projectOverride ?? this.project;
 		const baseUrl = `https://dev.azure.com/${this.org}`;
+		const normalizedEndpoint = endpoint.trim().replace(/^\/+/, "");
+		const apiVersion = "7.1";
 
+		let url: string;
 		if (proj) {
-			return `${baseUrl}/${proj}/${endpoint}`;
+			url = `${baseUrl}/${proj}/${normalizedEndpoint}`;
+		} else {
+			url = `${baseUrl}/${normalizedEndpoint}`;
 		}
-		return `${baseUrl}/${endpoint}`;
+
+		// Přidání api-version
+		const separator = url.includes("?") ? "&" : "?";
+		return `${url}${separator}api-version=${apiVersion}`;
 	}
 
 	/**
@@ -109,8 +117,12 @@ export class AzureDevOpsClient extends HttpClient {
 		const url = this.buildUrl(endpoint, options.project);
 		const headers = this.getHeaders();
 		const controller = new AbortController();
-		// Timeout 10s
-		const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+		// Použijeme configured timeout or default 10s
+		const timeoutId = setTimeout(
+			() => controller.abort(),
+			this.timeout ?? 10000
+		);
 
 		try {
 			const response = await fetch(url, {
