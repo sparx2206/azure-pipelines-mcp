@@ -10,7 +10,7 @@ import { registerRepositoryTools } from "./tools/repositories.js";
 export function createServer(): McpServer {
 	const server = new McpServer({
 		name: "azure-pipelines-mcp",
-		version: "0.1.2",
+		version: "0.1.4",
 	});
 
 	registerExpressionsTools(server);

@@ -172,7 +172,7 @@ export class HttpClient {
 		try {
 			const headers = {
 				Accept: "text/plain, application/json, */*",
-				"User-Agent": "azure-pipelines-mcp/0.1.2",
+				"User-Agent": "azure-pipelines-mcp/0.1.4",
 				...customHeaders,
 			};
 
