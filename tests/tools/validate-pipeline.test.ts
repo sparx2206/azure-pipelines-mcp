@@ -4,6 +4,7 @@ import {
 	parseValidationErrors,
 	getDummyPipeline,
 	createDummyPipeline,
+	registerValidatePipelineTools,
 } from "../../src/tools/validate-pipeline.js";
 import { getDefaultCache } from "../../src/services/cache.js";
 
@@ -219,6 +220,175 @@ describe("validate-pipeline", () => {
 					body: expect.stringContaining("DummyValidationPipeline"),
 				})
 			);
+		});
+
+		it("should ignore 409 Conflict when folder exists", async () => {
+			const mockFetch = vi.fn().mockImplementation((url) => {
+				if (url.toString().includes("folders")) {
+					return Promise.reject(new Error("HTTP 409: Conflict"));
+				}
+				if (url.toString().includes("_apis/pipelines")) {
+					return Promise.resolve({
+						ok: true,
+						status: 200,
+						json: () =>
+							Promise.resolve({
+								id: 1000,
+								name: "DummyValidationPipeline",
+								folder: "\\AI\\DummyValidationPipeline",
+							}),
+					});
+				}
+				return Promise.reject(new Error("Unknown URL"));
+			});
+			global.fetch = mockFetch;
+
+			const result = await createDummyPipeline("repo-id");
+
+			expect(result.pipelineId).toBe(1000);
+			// Should still proceed to create pipeline
+			expect(mockFetch).toHaveBeenCalledTimes(2);
+		});
+
+		it("should throw on non-409 error when creating folder", async () => {
+			const mockFetch = vi.fn().mockImplementation((url) => {
+				if (url.toString().includes("folders")) {
+					return Promise.reject(new Error("HTTP 403: Forbidden"));
+				}
+				return Promise.resolve({});
+			});
+			global.fetch = mockFetch;
+
+			await expect(createDummyPipeline("repo-id")).rejects.toThrow(
+				"HTTP 403: Forbidden"
+			);
+		});
+	});
+
+	describe("registerValidatePipelineTools", () => {
+		it("should register all tools and handlers should work", async () => {
+			const mockServer = {
+				tool: vi.fn(),
+				registerTool: vi.fn(),
+			};
+
+			// @ts-expect-error - using mock server
+			registerValidatePipelineTools(mockServer);
+
+			// Check that 3 tools were registered
+			expect(mockServer.registerTool).toHaveBeenCalledTimes(3);
+
+			// Verify tool names
+			const registeredTools = mockServer.registerTool.mock.calls.map(
+				(call) => call[0]
+			);
+			expect(registeredTools).toContain("validate_pipeline_yaml");
+			expect(registeredTools).toContain("get_dummy_pipeline");
+			expect(registeredTools).toContain("create_dummy_pipeline");
+
+			// Test "get_dummy_pipeline" handler
+			// Find the call for get_dummy_pipeline
+			const getDummyCall = mockServer.registerTool.mock.calls.find(
+				(call) => call[0] === "get_dummy_pipeline"
+			);
+			expect(getDummyCall).toBeDefined();
+
+			if (!getDummyCall) throw new Error("get_dummy_pipeline not registered");
+
+			const getDummyHandler = getDummyCall[2]; // 3rd argument is the handler
+
+			// Mock fetch for successful response
+			const mockResponseData = {
+				value: [
+					{
+						id: 999,
+						name: "DummyValidationPipeline",
+						folder: "\\AI\\DummyValidationPipeline",
+					},
+				],
+			};
+			global.fetch = vi.fn().mockResolvedValue({
+				ok: true,
+				status: 200,
+				json: () => Promise.resolve(mockResponseData),
+				text: () => Promise.resolve(JSON.stringify(mockResponseData)),
+			});
+
+			const result = await getDummyHandler({ project: "test-project" });
+			expect(result.content[0].text).toContain("999");
+			expect(result.content[0].text).toContain("DummyValidationPipeline");
+
+			// Test "validate_pipeline_yaml" handler
+			const validatePipelineCall = mockServer.registerTool.mock.calls.find(
+				(call) => call[0] === "validate_pipeline_yaml"
+			);
+			expect(validatePipelineCall).toBeDefined();
+			if (!validatePipelineCall)
+				throw new Error("validate_pipeline_yaml not registered");
+			const validateHandler = validatePipelineCall[2];
+
+			// Mock fetch for validation (POST pipelines/runs)
+			global.fetch = vi.fn().mockImplementation((url) => {
+				if (url.toString().includes("/preview")) {
+					return Promise.resolve({
+						ok: true,
+						status: 200,
+						json: () => Promise.resolve({ finalYaml: "stages:\n- stage: A" }),
+					});
+				}
+				return Promise.reject(new Error("Unknown URL"));
+			});
+
+			const validateResult = await validateHandler({
+				yaml: "stages:\n- stage: A",
+				pipelineId: 1000,
+				project: "test-project",
+			});
+			expect(validateResult.content[0].text).toContain("stages:");
+			expect(validateResult.content[0].text).toContain("- stage: A");
+
+			// Test "create_dummy_pipeline" handler
+			const createDummyCall = mockServer.registerTool.mock.calls.find(
+				(call) => call[0] === "create_dummy_pipeline"
+			);
+			expect(createDummyCall).toBeDefined();
+
+			if (!createDummyCall)
+				throw new Error("create_dummy_pipeline not registered");
+
+			const createDummyHandler = createDummyCall[2];
+
+			// Mock fetch for create (PUT folder + POST pipeline)
+			global.fetch = vi.fn().mockImplementation((url) => {
+				if (url.toString().includes("folders")) {
+					return Promise.resolve({
+						ok: true,
+						status: 200,
+						json: () => Promise.resolve({}),
+					});
+				}
+				if (url.toString().includes("_apis/pipelines")) {
+					return Promise.resolve({
+						ok: true,
+						status: 200,
+						json: () =>
+							Promise.resolve({
+								id: 1000,
+								name: "DummyValidationPipeline",
+								folder: "\\AI\\DummyValidationPipeline",
+								_links: { web: { href: "http://pipeline/1000" } },
+							}),
+					});
+				}
+				return Promise.reject(new Error("Unknown URL"));
+			});
+
+			const createResult = await createDummyHandler({
+				repositoryId: "repo-123",
+				project: "test-project",
+			});
+			expect(createResult.content[0].text).toContain("1000");
+			expect(createResult.content[0].text).toContain("http://pipeline/1000");
 		});
 	});
 });
