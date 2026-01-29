@@ -138,4 +138,44 @@ export class AzureDevOpsClient extends HttpClient {
 			clearTimeout(timeoutId);
 		}
 	}
+
+	/**
+	 * Performs a PUT request to Azure DevOps API.
+	 *
+	 * NOTE: PUT is typically idempotent, but we don't implement retry
+	 * to keep behavior consistent with POST.
+	 */
+	async put<T>(
+		endpoint: string,
+		body: unknown,
+		options: { project?: string } = {}
+	): Promise<T> {
+		const url = this.buildUrl(endpoint, options.project);
+		const headers = this.getHeaders();
+		const controller = new AbortController();
+
+		const timeoutId = setTimeout(
+			() => controller.abort(),
+			this.timeout ?? 10000
+		);
+
+		try {
+			const response = await fetch(url, {
+				method: "PUT",
+				headers,
+				body: JSON.stringify(body),
+				signal: controller.signal,
+			});
+
+			if (!response.ok) {
+				throw new Error(
+					`HTTP ${response.status}: ${response.statusText} - ${url}`
+				);
+			}
+
+			return (await response.json()) as T;
+		} finally {
+			clearTimeout(timeoutId);
+		}
+	}
 }
