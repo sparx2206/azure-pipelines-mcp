@@ -77,6 +77,7 @@ describe("validate-pipeline", () => {
 				ok: false,
 				status: 400,
 				statusText: "Bad Request",
+				text: () => Promise.resolve("Line 5: Missing required field"),
 			});
 			global.fetch = mockFetch;
 
