@@ -1,6 +1,6 @@
 {
   "name": "azure-pipelines-mcp",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "MCP server for Azure Pipelines YAML authoring assistance — validation, task reference, expressions, variables, and schema",
   "type": "module",
   "bin": {

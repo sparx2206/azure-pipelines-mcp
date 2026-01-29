@@ -169,7 +169,7 @@ describe("validate-pipeline", () => {
 	describe("createDummyPipeline", () => {
 		it("should create folder and pipeline", async () => {
 			const mockFetch = vi.spyOn(global, "fetch").mockImplementation((url) => {
-				if (url.toString().includes("folders")) {
+				if (url.toString().includes("folders?path=")) {
 					return Promise.resolve({
 						ok: true,
 						status: 200,
@@ -189,7 +189,7 @@ describe("validate-pipeline", () => {
 							}),
 					} as Response);
 				}
-				return Promise.reject(new Error("Unknown URL"));
+				return Promise.reject(new Error("Unknown URL: " + url));
 			});
 
 			const result = await createDummyPipeline("repo-id");
@@ -200,7 +200,7 @@ describe("validate-pipeline", () => {
 			// Check first call (PUT folder)
 			expect(mockFetch).toHaveBeenNthCalledWith(
 				1,
-				expect.stringContaining("folders"),
+				expect.stringContaining("folders?path="),
 				expect.objectContaining({ method: "PUT" })
 			);
 
@@ -210,7 +210,7 @@ describe("validate-pipeline", () => {
 				expect.stringContaining("_apis/pipelines"),
 				expect.objectContaining({
 					method: "POST",
-					body: expect.stringContaining("DummyValidationPipeline"),
+					body: expect.stringContaining("repository"),
 				})
 			);
 		});

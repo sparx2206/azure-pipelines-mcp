@@ -33,6 +33,13 @@ export class AzureDevOpsClient extends HttpClient {
 		}
 	}
 
+	/**
+	 * Vrátí aktuálně nastavený projekt (pokud existuje).
+	 */
+	public getProject(): string | undefined {
+		return this.project;
+	}
+
 	private getSafeConfig() {
 		try {
 			const cfg = loadConfig();
@@ -81,6 +88,29 @@ export class AzureDevOpsClient extends HttpClient {
 	}
 
 	/**
+	 * Pomocná metoda pro zpracování odpovědi a chyb.
+	 */
+	private async handleResponse<T>(response: Response, url: string): Promise<T> {
+		if (!response.ok) {
+			let errorBody = await response.text().catch(() => "");
+			if (errorBody.includes("<!DOCTYPE html") || errorBody.includes("<html>")) {
+				// Extract title from HTML if possible
+				const titleMatch = errorBody.match(/<title>(.*?)<\/title>/i);
+				errorBody = titleMatch 
+					? `HTML Error: ${titleMatch[1]}` 
+					: "HTML Error (possibly 404 or authentication issue)";
+			} else if (errorBody.length > 1000) {
+				errorBody = errorBody.substring(0, 1000) + "... (truncated)";
+			}
+
+			throw new Error(
+				`HTTP ${response.status}: ${response.statusText} - ${url}${errorBody ? ` - ${errorBody}` : ""}`
+			);
+		}
+		return (await response.json()) as T;
+	}
+
+	/**
 	 * Provede GET požadavek na Azure DevOps API.
 	 */
 	async get<T>(
@@ -97,23 +127,16 @@ export class AzureDevOpsClient extends HttpClient {
 
 	/**
 	 * Performs a POST request to Azure DevOps API.
-	 *
-	 * NOTE: No automatic retry for POST requests because they are not idempotent.
-	 * Retrying a non-idempotent operation could cause duplicate side-effects
-	 * (e.g., creating multiple pipelines, triggering multiple builds).
-	 * Callers should implement their own retry logic if needed for specific endpoints.
 	 */
 	async post<T>(
 		endpoint: string,
 		body: unknown,
 		options: { project?: string } = {}
 	): Promise<T> {
-
 		const url = this.buildUrl(endpoint, options.project);
 		const headers = this.getHeaders();
 		const controller = new AbortController();
 
-		// Use configured timeout or default 10s
 		const timeoutId = setTimeout(
 			() => controller.abort(),
 			this.timeout ?? 10000
@@ -127,13 +150,7 @@ export class AzureDevOpsClient extends HttpClient {
 				signal: controller.signal,
 			});
 
-			if (!response.ok) {
-				throw new Error(
-					`HTTP ${response.status}: ${response.statusText} - ${url}`
-				);
-			}
-
-			return (await response.json()) as T;
+			return await this.handleResponse<T>(response, url);
 		} finally {
 			clearTimeout(timeoutId);
 		}
@@ -141,9 +158,6 @@ export class AzureDevOpsClient extends HttpClient {
 
 	/**
 	 * Performs a PUT request to Azure DevOps API.
-	 *
-	 * NOTE: PUT is typically idempotent, but we don't implement retry
-	 * to keep behavior consistent with POST.
 	 */
 	async put<T>(
 		endpoint: string,
@@ -167,13 +181,7 @@ export class AzureDevOpsClient extends HttpClient {
 				signal: controller.signal,
 			});
 
-			if (!response.ok) {
-				throw new Error(
-					`HTTP ${response.status}: ${response.statusText} - ${url}`
-				);
-			}
-
-			return (await response.json()) as T;
+			return await this.handleResponse<T>(response, url);
 		} finally {
 			clearTimeout(timeoutId);
 		}

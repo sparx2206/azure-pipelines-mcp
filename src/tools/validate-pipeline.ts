@@ -56,8 +56,19 @@ export async function validatePipelineYaml(
 	project?: string
 ): Promise<ValidationResult> {
 	const client = new AzureDevOpsClient();
+	
+	// Ensure project is available (either from args or config)
+	if (!project && !client.getProject()) {
+		return {
+			valid: false,
+			errors: [{ 
+				message: "Project must be provided via the 'project' argument or AZURE_DEVOPS_PROJECT environment variable for pipeline validation." 
+			}],
+		};
+	}
 
-	const endpoint = `_apis/pipelines/${pipelineId}/preview`;
+	// Preview API needs specific api-version to work reliably
+	const endpoint = `_apis/pipelines/${pipelineId}/preview?api-version=7.1-preview.1`;
 	const body = {
 		previewRun: true,
 		yamlOverride: yaml,
@@ -239,7 +250,8 @@ async function ensureFolderExists(
 	folderPath: string,
 	project?: string
 ): Promise<void> {
-	const endpoint = `_apis/build/folders/${encodeURIComponent(folderPath)}`;
+	// The correct endpoint is PUT _apis/build/folders?path={path}
+	const endpoint = `_apis/build/folders?path=${encodeURIComponent(folderPath)}`;
 
 	try {
 		await client.put(
@@ -251,7 +263,12 @@ async function ensureFolderExists(
 		// Folder might already exist, ignore 409 Conflict
 		const message = error instanceof Error ? error.message : "";
 		if (!message.includes("409")) {
-			throw error;
+			// Also ignore 400 Bad Request which might mean the folder exists in some versions
+			if (!message.includes("400")) {
+				// If strictly 404, it might mean the API is not supported or project not found
+				// But we'll let it bubble up if it's not a "exists" error
+				throw error;
+			}
 		}
 	}
 }
@@ -265,6 +282,10 @@ export async function createDummyPipeline(
 	yamlPath: string = "azure-pipelines.yml"
 ): Promise<CreateDummyPipelineResult> {
 	const client = new AzureDevOpsClient();
+
+	if (!project && !client.getProject()) {
+		throw new Error("Project must be provided via the 'project' argument or AZURE_DEVOPS_PROJECT environment variable.");
+	}
 
 	// Ensure folder exists
 	await ensureFolderExists(client, DUMMY_PIPELINE_FOLDER, project);
@@ -324,6 +345,10 @@ export async function getDummyPipeline(
 	project?: string
 ): Promise<GetDummyPipelineResult> {
 	const client = new AzureDevOpsClient();
+
+	if (!project && !client.getProject()) {
+		return { found: false }; // Cannot search without project
+	}
 
 	const endpoint = "_apis/pipelines";
 

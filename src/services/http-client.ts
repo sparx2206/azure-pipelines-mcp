@@ -172,7 +172,7 @@ export class HttpClient {
 		try {
 			const headers = {
 				Accept: "text/plain, application/json, */*",
-				"User-Agent": "azure-pipelines-mcp/0.1.0",
+				"User-Agent": "azure-pipelines-mcp/0.1.2",
 				...customHeaders,
 			};
 
@@ -194,8 +194,19 @@ export class HttpClient {
 			}
 
 			if (!response.ok) {
+				let errorBody = await response.text().catch(() => "");
+				if (errorBody.includes("<!DOCTYPE html") || errorBody.includes("<html>")) {
+					// Extract title from HTML if possible
+					const titleMatch = errorBody.match(/<title>(.*?)<\/title>/i);
+					errorBody = titleMatch 
+						? `HTML Error: ${titleMatch[1]}` 
+						: "HTML Error (possibly 404 or authentication issue)";
+				} else if (errorBody.length > 1000) {
+					errorBody = errorBody.substring(0, 1000) + "... (truncated)";
+				}
+
 				throw new HttpClientError(
-					`HTTP ${response.status}: ${response.statusText}`,
+					`HTTP ${response.status}: ${response.statusText}${errorBody ? ` - ${errorBody}` : ""}`,
 					url
 				);
 			}

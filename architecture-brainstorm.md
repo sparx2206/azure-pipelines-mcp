@@ -376,3 +376,10 @@ Obsah zahrnuje:
 - [MS Learn Catalog API](https://learn.microsoft.com/en-us/training/support/catalog-api-developer-reference)
 - [Validating YAML using Azure DevOps (blog)](https://johnlokerse.dev/2022/02/07/validating-yaml-using-azure-devops-or-cli/)
 - [Official @azure-devops/mcp](https://github.com/microsoft/azure-devops-mcp)
+
+---
+
+## 10. Backlog
+
+### 10.1 Helper Tools
+- [ ] **`get_repositories`**: Získání seznamu repozitářů (ID, jméno) v projektu, aby uživatel mohl snadno vybrat správné repo pro vytvoření dummy pipeline.
