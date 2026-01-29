@@ -10,6 +10,9 @@ import { TASK_INDEX_URL, parseTaskIndex, type PipelineTask } from "./search-task
 const TASK_REFERENCE_BASE_URL =
 	"https://raw.githubusercontent.com/MicrosoftDocs/azure-devops-yaml-schema/main/task-reference/";
 
+// Task reference se mění zřídka — cache na 24 hodin
+const TASK_REFERENCE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
 export interface TaskInput {
 	name: string;
 	label: string;
@@ -57,7 +60,7 @@ export function parseDescription(markdown: string): string {
 }
 
 /**
- * Extrahuje první YAML syntax blok (nejnovější moniker).
+ * Extrahuje první YAML syntax blok ze syntax sekce.
  */
 export function parseSyntax(markdown: string): string | undefined {
 	const syntaxSection = markdown.match(
@@ -114,8 +117,7 @@ export function parseInputBlock(block: string): TaskInput | null {
 	if (allowedMatch) {
 		allowedValues = allowedMatch[0]
 			.match(/`([^`]+)`/g)
-			?.map((v) => v.replace(/`/g, ""))
-			.filter((v) => v !== "Allowed values:");
+			?.map((v) => v.replace(/`/g, ""));
 	} else {
 		// Alternativní formát: 'value1' | 'value2' | ...
 		const pipeMatch = block.match(
@@ -317,7 +319,7 @@ export async function handleGetTaskReference(taskName: string): Promise<string> 
 	// Fetchneme dokumentaci
 	const docUrl = `${TASK_REFERENCE_BASE_URL}${taskInfo.documentationPath}`;
 	try {
-		const markdown = await httpClient.fetch(docUrl);
+		const markdown = await httpClient.fetch(docUrl, { cacheTtlMs: TASK_REFERENCE_CACHE_TTL_MS });
 		const reference = parseTaskMarkdown(markdown, name, version);
 		return JSON.stringify(reference, null, 2);
 	} catch (error) {
