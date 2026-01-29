@@ -171,6 +171,38 @@ export function registerValidatePipelineTools(server: McpServer): void {
 			};
 		}
 	);
+
+	// get_dummy_pipeline tool
+	server.registerTool(
+		"get_dummy_pipeline",
+		{
+			title: "Get Dummy Pipeline",
+			description:
+				"Finds an existing dummy pipeline in Azure DevOps for YAML validation. " +
+				"Searches for a pipeline named 'DummyValidationPipeline' in the \\AI\\DummyValidationPipeline folder. " +
+				"If not found, use create_dummy_pipeline to create one.",
+			inputSchema: {
+				project: z
+					.string()
+					.optional()
+					.describe(
+						"Optional project name override. Uses default project from config if not provided."
+					),
+			},
+		},
+		async ({ project }) => {
+			const result = await getDummyPipeline(project);
+
+			return {
+				content: [
+					{
+						type: "text" as const,
+						text: JSON.stringify(result, null, 2),
+					},
+				],
+			};
+		}
+	);
 }
 
 // Constants for dummy pipeline
@@ -262,4 +294,62 @@ export async function createDummyPipeline(
 		folder: response.folder,
 		url: response._links?.web?.href ?? "",
 	};
+}
+
+/**
+ * Result of searching for a dummy pipeline.
+ */
+export interface GetDummyPipelineResult {
+	found: boolean;
+	pipelineId?: number;
+	name?: string;
+	folder?: string;
+}
+
+/**
+ * Azure DevOps Pipelines list response.
+ */
+interface PipelinesListResponse {
+	value: Array<{
+		id: number;
+		name: string;
+		folder: string;
+	}>;
+}
+
+/**
+ * Finds an existing dummy pipeline for YAML validation.
+ */
+export async function getDummyPipeline(
+	project?: string
+): Promise<GetDummyPipelineResult> {
+	const client = new AzureDevOpsClient();
+
+	const endpoint = "_apis/pipelines";
+
+	try {
+		const response = await client.get<PipelinesListResponse>(endpoint, {
+			project,
+		});
+
+		// Find pipeline matching our naming convention
+		const dummyPipeline = response.value.find(
+			(p) =>
+				p.name === DUMMY_PIPELINE_NAME &&
+				p.folder === DUMMY_PIPELINE_FOLDER
+		);
+
+		if (dummyPipeline) {
+			return {
+				found: true,
+				pipelineId: dummyPipeline.id,
+				name: dummyPipeline.name,
+				folder: dummyPipeline.folder,
+			};
+		}
+
+		return { found: false };
+	} catch {
+		return { found: false };
+	}
 }

@@ -39,7 +39,8 @@ describe("MCP Server", () => {
 		expect(toolNames).toContain("get_task_reference");
 		expect(toolNames).toContain("validate_pipeline_yaml");
 		expect(toolNames).toContain("create_dummy_pipeline");
-		expect(toolNames).toHaveLength(7);
+		expect(toolNames).toContain("get_dummy_pipeline");
+		expect(toolNames).toHaveLength(8);
 	});
 
 	it("each tool has a description", async () => {
