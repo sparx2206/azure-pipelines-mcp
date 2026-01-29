@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
 	validatePipelineYaml,
 	parseValidationErrors,
+	getDummyPipeline,
+	createDummyPipeline,
 } from "../../src/tools/validate-pipeline.js";
+import { getDefaultCache } from "../../src/services/cache.js";
 
 // Mock environment variables
 const originalEnv = process.env;
@@ -16,6 +19,7 @@ describe("validate-pipeline", () => {
 			AZURE_DEVOPS_PROJECT: "test-project",
 		};
 		vi.restoreAllMocks();
+		getDefaultCache().clear();
 	});
 
 	afterEach(() => {
@@ -103,6 +107,116 @@ describe("validate-pipeline", () => {
 				expect.objectContaining({
 					method: "POST",
 					body: expect.stringContaining("yamlOverride"),
+				})
+			);
+		});
+	});
+
+	describe("getDummyPipeline", () => {
+		it("should find existing tool pipeline", async () => {
+			const mockResponseData = {
+				value: [
+					{
+						id: 999,
+						name: "DummyValidationPipeline",
+						folder: "\\AI\\DummyValidationPipeline",
+					},
+				],
+			};
+			const mockFetch = vi.fn().mockResolvedValue({
+				ok: true,
+				status: 200,
+				json: () => Promise.resolve(mockResponseData),
+				text: () => Promise.resolve(JSON.stringify(mockResponseData)),
+			});
+			global.fetch = mockFetch;
+
+			const result = await getDummyPipeline();
+
+			expect(result.found).toBe(true);
+			expect(result.pipelineId).toBe(999);
+			expect(result.name).toBe("DummyValidationPipeline");
+		});
+
+		it("should return found: false when not found", async () => {
+			const mockResponseData = {
+				value: [
+					{
+						id: 111,
+						name: "OtherPipeline",
+						folder: "\\",
+					},
+				],
+			};
+			const mockFetch = vi.fn().mockResolvedValue({
+				ok: true,
+				status: 200,
+				json: () => Promise.resolve(mockResponseData),
+				text: () => Promise.resolve(JSON.stringify(mockResponseData)),
+			});
+			global.fetch = mockFetch;
+
+			const result = await getDummyPipeline();
+
+			expect(result.found).toBe(false);
+		});
+
+		it("should return found: false on API error", async () => {
+			const mockFetch = vi.fn().mockRejectedValue(new Error("API Error"));
+			global.fetch = mockFetch;
+
+			const result = await getDummyPipeline();
+
+			expect(result.found).toBe(false);
+		});
+	});
+
+	describe("createDummyPipeline", () => {
+		it("should create folder and pipeline", async () => {
+			const mockFetch = vi.fn().mockImplementation((url) => {
+				if (url.toString().includes("folders")) {
+					return Promise.resolve({
+						ok: true,
+						status: 200,
+						json: () => Promise.resolve({}),
+					});
+				}
+				if (url.toString().includes("_apis/pipelines")) {
+					return Promise.resolve({
+						ok: true,
+						status: 200,
+						json: () =>
+							Promise.resolve({
+								id: 1000,
+								name: "DummyValidationPipeline",
+								folder: "\\AI\\DummyValidationPipeline",
+								_links: { web: { href: "http://pipeline/1000" } },
+							}),
+					});
+				}
+				return Promise.reject(new Error("Unknown URL"));
+			});
+			global.fetch = mockFetch;
+
+			const result = await createDummyPipeline("repo-id");
+
+			expect(result.pipelineId).toBe(1000);
+			expect(result.url).toBe("http://pipeline/1000");
+
+			// Check first call (PUT folder)
+			expect(mockFetch).toHaveBeenNthCalledWith(
+				1,
+				expect.stringContaining("folders"),
+				expect.objectContaining({ method: "PUT" })
+			);
+
+			// Check second call (POST pipeline)
+			expect(mockFetch).toHaveBeenNthCalledWith(
+				2,
+				expect.stringContaining("_apis/pipelines"),
+				expect.objectContaining({
+					method: "POST",
+					body: expect.stringContaining("DummyValidationPipeline"),
 				})
 			);
 		});
