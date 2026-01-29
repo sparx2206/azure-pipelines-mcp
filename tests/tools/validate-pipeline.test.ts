@@ -108,6 +108,44 @@ describe("validate-pipeline", () => {
 				})
 			);
 		});
+
+		it("should include branch ref in body when provided", async () => {
+			const mockFetch = vi.spyOn(global, "fetch").mockResolvedValue({
+				ok: true,
+				status: 200,
+				json: () => Promise.resolve({ finalYaml: "yaml" }),
+			} as Response);
+
+			await validatePipelineYaml("trigger: none", 456, "custom-project", "feature/test");
+
+			// Expect body to contain resources.repositories.self.refName
+			expect(mockFetch).toHaveBeenCalledWith(
+				expect.any(String),
+				expect.objectContaining({
+					method: "POST",
+					body: expect.stringContaining("refs/heads/feature/test"),
+				})
+			);
+			
+			// Verify full JSON structure
+			const call = mockFetch.mock.calls[0];
+			const body = JSON.parse(call[1]!.body as string);
+			expect(body.resources.repositories.self.refName).toBe("refs/heads/feature/test");
+		});
+
+		it("should handle full ref format", async () => {
+			const mockFetch = vi.spyOn(global, "fetch").mockResolvedValue({
+				ok: true,
+				status: 200,
+				json: () => Promise.resolve({ finalYaml: "yaml" }),
+			} as Response);
+
+			await validatePipelineYaml("trigger: none", 456, "custom-project", "refs/heads/main");
+
+			const call = mockFetch.mock.calls[0];
+			const body = JSON.parse(call[1]!.body as string);
+			expect(body.resources.repositories.self.refName).toBe("refs/heads/main");
+		});
 	});
 
 	describe("getDummyPipeline", () => {

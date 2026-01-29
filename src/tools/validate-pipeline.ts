@@ -53,7 +53,8 @@ export function parseValidationErrors(
 export async function validatePipelineYaml(
 	yaml: string,
 	pipelineId: number,
-	project?: string
+	project?: string,
+	branch?: string
 ): Promise<ValidationResult> {
 	const client = new AzureDevOpsClient();
 	
@@ -69,10 +70,22 @@ export async function validatePipelineYaml(
 
 	// Preview API needs specific api-version to work reliably
 	const endpoint = `_apis/pipelines/${pipelineId}/preview?api-version=7.1-preview.1`;
-	const body = {
+	
+	const body: any = {
 		previewRun: true,
 		yamlOverride: yaml,
 	};
+
+	if (branch) {
+		const refName = branch.startsWith("refs/") ? branch : `refs/heads/${branch}`;
+		body.resources = {
+			repositories: {
+				self: {
+					refName
+				}
+			}
+		};
+	}
 
 	try {
 		const response = await client.post<PreviewResponse>(endpoint, body, {
@@ -122,10 +135,17 @@ export function registerValidatePipelineTools(server: McpServer): void {
 					.describe(
 						"Optional project name override. Uses default project from config if not provided."
 					),
+				branch: z
+					.string()
+					.optional()
+					.describe(
+						"Optional branch name to validate against (e.g. 'main', 'feature/123'). " +
+						"Useful when the pipeline relies on templates or variables from a specific branch."
+					),
 			},
 		},
-		async ({ yaml, pipelineId, project }) => {
-			const result = await validatePipelineYaml(yaml, pipelineId, project);
+		async ({ yaml, pipelineId, project, branch }) => {
+			const result = await validatePipelineYaml(yaml, pipelineId, project, branch);
 
 			return {
 				content: [
