@@ -46,8 +46,13 @@ export async function getRepositories(
 			defaultBranch: repo.defaultBranch,
 		}));
 	} catch (error) {
-		const message = error instanceof Error ? error.message : "Unknown error fetching repositories";
-		throw new Error(message);
+		const baseMessage =
+			error instanceof Error
+				? error.message
+				: error != null
+					? String(error)
+					: "Unknown error";
+		throw new Error(`Failed to fetch Azure DevOps repositories: ${baseMessage}`);
 	}
 }
 

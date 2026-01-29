@@ -98,7 +98,7 @@ If you are using an MCP extension in VS Code, configure it in `.vscode/settings.
 | `get_predefined_variables` | List of system variables (`Build.BuildId`, etc.). |
 | `get_yaml_schema` | Reference for YAML structure (`steps`, `stages`, `pool`). |
 | `get_repositories` | Lists Git repositories in the project. |
-| `get_dummy_pipeline` | utility to find a pipeline for validation context. |
+| `get_dummy_pipeline` | Utility to find a pipeline for validation context. |
 | `create_dummy_pipeline` | Utility to create a pipeline for validation context. |
 
 ## Development

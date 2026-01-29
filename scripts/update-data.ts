@@ -23,12 +23,14 @@ const ExpressionCategorySchema = z.object({
 	rules: z.array(z.any()).optional(),
 });
 
+/*
 const ExpressionsSchema = z.object({
 	description: z.string(),
 	syntaxVariants: z.record(z.any()),
 	categories: z.record(ExpressionCategorySchema),
 	contexts: z.record(z.any()),
 });
+*/
 
 const VariableSchema = z.object({
 	name: z.string(),
@@ -45,11 +47,13 @@ const VariablesSchema = z.object({
 	})),
 });
 
+/*
 const YamlSchemaSchema = z.object({
 	description: z.string(),
 	notation: z.record(z.string(), z.string()),
 	elements: z.record(z.string(), z.any()),
 });
+*/
 
 // --- Fetchers ---
 
@@ -172,7 +176,8 @@ async function updateVariables() {
 
 async function updateExpressions() {
 	const url = "https://raw.githubusercontent.com/MicrosoftDocs/azure-devops-docs/main/docs/pipelines/process/expressions.md";
-	const md = await fetchMarkdown(url);
+	// const md = await fetchMarkdown(url);
+	await fetchMarkdown(url); // Fetch to ensure URL is valid, but don't use content yet
 
 	// This is more complex because it's not all tables.
 	// For now, we'll just log and let the user know we might need manual refinement 
