@@ -150,7 +150,7 @@ describe("MCP Server", () => {
 		const client = await createConnectedClient();
 		const result = (await client.callTool({
 			name: "get_task_reference",
-			arguments: { task: "invalid" },
+			arguments: { taskName: "invalid" },
 		})) as ToolResult;
 
 		expect(result.content).toBeInstanceOf(Array);

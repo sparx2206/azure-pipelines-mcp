@@ -5,10 +5,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getDefaultHttpClient, NotFoundError } from "../services/http-client.js";
-import { parseTaskIndex, type PipelineTask } from "./search-tasks.js";
-
-const TASK_INDEX_URL =
-	"https://raw.githubusercontent.com/MicrosoftDocs/azure-devops-yaml-schema/main/task-reference/index.md";
+import { TASK_INDEX_URL, parseTaskIndex, type PipelineTask } from "./search-tasks.js";
 
 const TASK_REFERENCE_BASE_URL =
 	"https://raw.githubusercontent.com/MicrosoftDocs/azure-devops-yaml-schema/main/task-reference/";
@@ -218,7 +215,7 @@ export function parseRemarks(markdown: string): string | undefined {
 
 	// Odstraníme moniker tagy a editable-content wrappery
 	let content = remarksSection[1]
-		.replace(/:::moniker[^:]*:::/g, "")
+		.replace(/^:::moniker.*$/gm, "")
 		.replace(/<!-- :::editable-content[^>]*-->/g, "")
 		.replace(/<!-- :::editable-content-end::: -->/g, "")
 		.trim();
@@ -239,7 +236,7 @@ export function parseExamples(markdown: string): string | undefined {
 	if (!examplesSection) return undefined;
 
 	let content = examplesSection[1]
-		.replace(/:::moniker[^:]*:::/g, "")
+		.replace(/^:::moniker.*$/gm, "")
 		.replace(/<!-- :::editable-content[^>]*-->/g, "")
 		.replace(/<!-- :::editable-content-end::: -->/g, "")
 		.trim();
@@ -285,37 +282,49 @@ async function findTaskInIndex(fullName: string): Promise<PipelineTask | null> {
 /**
  * Handler pro get_task_reference tool.
  */
-export async function handleGetTaskReference(task: string): Promise<string> {
+export async function handleGetTaskReference(taskName: string): Promise<string> {
 	// Validace formátu TaskName@Version
-	const taskMatch = task.match(/^([A-Za-z0-9_-]+)@(\d+)$/);
+	const taskMatch = taskName.match(/^([A-Za-z0-9_-]+)@(\d+)$/);
 	if (!taskMatch) {
 		return JSON.stringify({
-			error: `Invalid task format '${task}'. Expected format: TaskName@Version (e.g., DotNetCoreCLI@2)`,
+			error: `Invalid task format '${taskName}'. Expected format: TaskName@Version (e.g., DotNetCoreCLI@2)`,
 		});
 	}
 
 	const [, name, version] = taskMatch;
 	const httpClient = getDefaultHttpClient();
 
+	// Najdeme task v indexu pro documentationPath
+	let taskInfo: PipelineTask | null;
 	try {
-		// Najdeme task v indexu pro documentationPath
-		const taskInfo = await findTaskInIndex(task);
-		if (!taskInfo) {
+		taskInfo = await findTaskInIndex(taskName);
+	} catch (error) {
+		if (error instanceof NotFoundError) {
 			return JSON.stringify({
-				error: `Task '${task}' not found. Use search_pipeline_tasks to find available tasks.`,
+				error: "Task index not found. The documentation source may be unavailable.",
+				url: TASK_INDEX_URL,
 			});
 		}
+		throw error;
+	}
 
-		// Fetchneme dokumentaci
-		const docUrl = `${TASK_REFERENCE_BASE_URL}${taskInfo.documentationPath}`;
+	if (!taskInfo) {
+		return JSON.stringify({
+			error: `Task '${taskName}' not found. Use search_pipeline_tasks to find available tasks.`,
+		});
+	}
+
+	// Fetchneme dokumentaci
+	const docUrl = `${TASK_REFERENCE_BASE_URL}${taskInfo.documentationPath}`;
+	try {
 		const markdown = await httpClient.fetch(docUrl);
-
 		const reference = parseTaskMarkdown(markdown, name, version);
 		return JSON.stringify(reference, null, 2);
 	} catch (error) {
 		if (error instanceof NotFoundError) {
 			return JSON.stringify({
-				error: `Documentation for task '${task}' not found.`,
+				error: `Documentation for task '${taskName}' not found.`,
+				url: docUrl,
 			});
 		}
 		throw error;
@@ -333,19 +342,19 @@ export function registerTaskReferenceTools(server: McpServer): void {
 			description:
 				"Get detailed reference documentation for a specific Azure Pipelines task — inputs, syntax, output variables, and examples. Use search_pipeline_tasks first to find the correct task name.",
 			inputSchema: {
-				task: z
+				taskName: z
 					.string()
 					.describe(
 						"Task name with version in format TaskName@Version (e.g., DotNetCoreCLI@2, Docker@2)."
 					),
 			},
 		},
-		async ({ task }) => {
+		async ({ taskName }) => {
 			return {
 				content: [
 					{
 						type: "text" as const,
-						text: await handleGetTaskReference(task),
+						text: await handleGetTaskReference(taskName),
 					},
 				],
 			};
