@@ -22,6 +22,8 @@ export interface FetchOptions {
 	skipCache?: boolean;
 	/** Override TTL pro cache v ms (přepíše výchozí TTL klienta) */
 	cacheTtlMs?: number;
+	/** Vlastní hlavičky požadavku */
+	headers?: Record<string, string>;
 }
 
 const DEFAULT_TIMEOUT = 10000;
@@ -104,7 +106,7 @@ export class HttpClient {
 		}
 
 		// Provedeme požadavek s retry
-		const response = await this.fetchWithRetry(url);
+		const response = await this.fetchWithRetry(url, options);
 
 		// Uložíme do cache
 		this.cache.set(url, response, options.cacheTtlMs ?? this.cacheTtlMs);
@@ -112,12 +114,15 @@ export class HttpClient {
 		return response;
 	}
 
-	private async fetchWithRetry(url: string): Promise<string> {
+	private async fetchWithRetry(
+		url: string,
+		options: FetchOptions = {}
+	): Promise<string> {
 		let lastError: Error | undefined;
 
 		for (let attempt = 1; attempt <= this.retries; attempt++) {
 			try {
-				return await this.doFetch(url);
+				return await this.doFetch(url, options.headers);
 			} catch (error) {
 				lastError = error as Error;
 
@@ -153,17 +158,23 @@ export class HttpClient {
 		);
 	}
 
-	private async doFetch(url: string): Promise<string> {
+	private async doFetch(
+		url: string,
+		customHeaders?: Record<string, string>
+	): Promise<string> {
 		const controller = new AbortController();
 		const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
 		try {
+			const headers = {
+				Accept: "text/plain, application/json, */*",
+				"User-Agent": "azure-pipelines-mcp/0.1.0",
+				...customHeaders,
+			};
+
 			const response = await fetch(url, {
 				signal: controller.signal,
-				headers: {
-					Accept: "text/plain, application/json, */*",
-					"User-Agent": "azure-pipelines-mcp/0.1.0",
-				},
+				headers,
 			});
 
 			if (response.status === 404) {
