@@ -59,12 +59,11 @@ describe("validate-pipeline", () => {
 
 	describe("validatePipelineYaml", () => {
 		it("should return valid result on success", async () => {
-			const mockFetch = vi.fn().mockResolvedValue({
+			vi.spyOn(global, "fetch").mockResolvedValue({
 				ok: true,
 				status: 200,
 				json: () => Promise.resolve({ finalYaml: "expanded: yaml" }),
-			});
-			global.fetch = mockFetch;
+			} as Response);
 
 			const result = await validatePipelineYaml(
 				"trigger: none",
@@ -78,13 +77,12 @@ describe("validate-pipeline", () => {
 		});
 
 		it("should return errors on validation failure", async () => {
-			const mockFetch = vi.fn().mockResolvedValue({
+			vi.spyOn(global, "fetch").mockResolvedValue({
 				ok: false,
 				status: 400,
 				statusText: "Bad Request",
 				text: () => Promise.resolve("Line 5: Missing required field"),
-			});
-			global.fetch = mockFetch;
+			} as Response);
 
 			const result = await validatePipelineYaml("invalid: yaml", 123);
 
@@ -94,12 +92,11 @@ describe("validate-pipeline", () => {
 		});
 
 		it("should call correct API endpoint", async () => {
-			const mockFetch = vi.fn().mockResolvedValue({
+			const mockFetch = vi.spyOn(global, "fetch").mockResolvedValue({
 				ok: true,
 				status: 200,
 				json: () => Promise.resolve({ finalYaml: "yaml" }),
-			});
-			global.fetch = mockFetch;
+			} as Response);
 
 			await validatePipelineYaml("trigger: none", 456, "custom-project");
 
@@ -124,13 +121,12 @@ describe("validate-pipeline", () => {
 					},
 				],
 			};
-			const mockFetch = vi.fn().mockResolvedValue({
+			vi.spyOn(global, "fetch").mockResolvedValue({
 				ok: true,
 				status: 200,
 				json: () => Promise.resolve(mockResponseData),
 				text: () => Promise.resolve(JSON.stringify(mockResponseData)),
-			});
-			global.fetch = mockFetch;
+			} as Response);
 
 			const result = await getDummyPipeline();
 
@@ -149,13 +145,12 @@ describe("validate-pipeline", () => {
 					},
 				],
 			};
-			const mockFetch = vi.fn().mockResolvedValue({
+			vi.spyOn(global, "fetch").mockResolvedValue({
 				ok: true,
 				status: 200,
 				json: () => Promise.resolve(mockResponseData),
 				text: () => Promise.resolve(JSON.stringify(mockResponseData)),
-			});
-			global.fetch = mockFetch;
+			} as Response);
 
 			const result = await getDummyPipeline();
 
@@ -163,8 +158,7 @@ describe("validate-pipeline", () => {
 		});
 
 		it("should return found: false on API error", async () => {
-			const mockFetch = vi.fn().mockRejectedValue(new Error("API Error"));
-			global.fetch = mockFetch;
+			vi.spyOn(global, "fetch").mockRejectedValue(new Error("API Error"));
 
 			const result = await getDummyPipeline();
 
@@ -174,13 +168,13 @@ describe("validate-pipeline", () => {
 
 	describe("createDummyPipeline", () => {
 		it("should create folder and pipeline", async () => {
-			const mockFetch = vi.fn().mockImplementation((url) => {
+			const mockFetch = vi.spyOn(global, "fetch").mockImplementation((url) => {
 				if (url.toString().includes("folders")) {
 					return Promise.resolve({
 						ok: true,
 						status: 200,
 						json: () => Promise.resolve({}),
-					});
+					} as Response);
 				}
 				if (url.toString().includes("_apis/pipelines")) {
 					return Promise.resolve({
@@ -193,11 +187,10 @@ describe("validate-pipeline", () => {
 								folder: "\\AI\\DummyValidationPipeline",
 								_links: { web: { href: "http://pipeline/1000" } },
 							}),
-					});
+					} as Response);
 				}
 				return Promise.reject(new Error("Unknown URL"));
 			});
-			global.fetch = mockFetch;
 
 			const result = await createDummyPipeline("repo-id");
 
@@ -223,7 +216,7 @@ describe("validate-pipeline", () => {
 		});
 
 		it("should ignore 409 Conflict when folder exists", async () => {
-			const mockFetch = vi.fn().mockImplementation((url) => {
+			const mockFetch = vi.spyOn(global, "fetch").mockImplementation((url) => {
 				if (url.toString().includes("folders")) {
 					return Promise.reject(new Error("HTTP 409: Conflict"));
 				}
@@ -237,11 +230,11 @@ describe("validate-pipeline", () => {
 								name: "DummyValidationPipeline",
 								folder: "\\AI\\DummyValidationPipeline",
 							}),
-					});
+					} as Response);
 				}
 				return Promise.reject(new Error("Unknown URL"));
 			});
-			global.fetch = mockFetch;
+
 
 			const result = await createDummyPipeline("repo-id");
 
@@ -251,13 +244,12 @@ describe("validate-pipeline", () => {
 		});
 
 		it("should throw on non-409 error when creating folder", async () => {
-			const mockFetch = vi.fn().mockImplementation((url) => {
+			vi.spyOn(global, "fetch").mockImplementation((url) => {
 				if (url.toString().includes("folders")) {
 					return Promise.reject(new Error("HTTP 403: Forbidden"));
 				}
-				return Promise.resolve({});
+				return Promise.resolve({} as Response);
 			});
-			global.fetch = mockFetch;
 
 			await expect(createDummyPipeline("repo-id")).rejects.toThrow(
 				"HTTP 403: Forbidden"
@@ -307,12 +299,12 @@ describe("validate-pipeline", () => {
 					},
 				],
 			};
-			global.fetch = vi.fn().mockResolvedValue({
+			vi.spyOn(global, "fetch").mockResolvedValue({
 				ok: true,
 				status: 200,
 				json: () => Promise.resolve(mockResponseData),
 				text: () => Promise.resolve(JSON.stringify(mockResponseData)),
-			});
+			} as Response);
 
 			const result = await getDummyHandler({ project: "test-project" });
 			expect(result.content[0].text).toContain("999");
@@ -327,14 +319,14 @@ describe("validate-pipeline", () => {
 				throw new Error("validate_pipeline_yaml not registered");
 			const validateHandler = validatePipelineCall[2];
 
-			// Mock fetch for validation (POST pipelines/runs)
-			global.fetch = vi.fn().mockImplementation((url) => {
+			// Mock fetch for validation (POST /_apis/pipelines/{id}/preview YAML preview endpoint)
+			vi.spyOn(global, "fetch").mockImplementation((url) => {
 				if (url.toString().includes("/preview")) {
 					return Promise.resolve({
 						ok: true,
 						status: 200,
 						json: () => Promise.resolve({ finalYaml: "stages:\n- stage: A" }),
-					});
+					} as Response);
 				}
 				return Promise.reject(new Error("Unknown URL"));
 			});
@@ -359,13 +351,13 @@ describe("validate-pipeline", () => {
 			const createDummyHandler = createDummyCall[2];
 
 			// Mock fetch for create (PUT folder + POST pipeline)
-			global.fetch = vi.fn().mockImplementation((url) => {
+			vi.spyOn(global, "fetch").mockImplementation((url) => {
 				if (url.toString().includes("folders")) {
 					return Promise.resolve({
 						ok: true,
 						status: 200,
 						json: () => Promise.resolve({}),
-					});
+					} as Response);
 				}
 				if (url.toString().includes("_apis/pipelines")) {
 					return Promise.resolve({
@@ -378,7 +370,7 @@ describe("validate-pipeline", () => {
 								folder: "\\AI\\DummyValidationPipeline",
 								_links: { web: { href: "http://pipeline/1000" } },
 							}),
-					});
+					} as Response);
 				}
 				return Promise.reject(new Error("Unknown URL"));
 			});
