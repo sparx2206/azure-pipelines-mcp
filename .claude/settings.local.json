@@ -2,13 +2,11 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:www.npmjs.com)",
-      "Bash(git checkout:*)",
-      "Bash(npm install:*)",
-      "Bash(npx tsc)",
-      "Bash(npx vitest:*)",
-      "Bash(npx eslint:*)",
-      "mcp__github__search_repositories",
-      "mcp__github__issue_write"
+      "Bash(git*)",
+      "Bash(npm*)",
+      "Bash(npx*)",
+      "mcp__github__*",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }
