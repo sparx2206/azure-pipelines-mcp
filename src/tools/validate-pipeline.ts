@@ -71,7 +71,17 @@ export async function validatePipelineYaml(
 	// Preview API needs specific api-version to work reliably
 	const endpoint = `_apis/pipelines/${pipelineId}/preview?api-version=7.1-preview.1`;
 	
-	const body: any = {
+	const body: {
+		previewRun: boolean;
+		yamlOverride: string;
+		resources?: {
+			repositories: {
+				self: {
+					refName: string;
+				};
+			};
+		};
+	} = {
 		previewRun: true,
 		yamlOverride: yaml,
 	};
@@ -181,7 +191,7 @@ export function registerValidatePipelineTools(server: McpServer): void {
 					.string()
 					.optional()
 					.describe(
-						"Path to the YAML file in the repository. Defaults to 'azure-pipelines.yml'"
+						"Path to the YAML file in the repository. Defaults to '/azure-pipelines.yml'"
 					),
 			},
 		},
@@ -263,43 +273,12 @@ interface PipelineResponse {
 }
 
 /**
- * Creates a folder in Azure DevOps if it doesn't exist.
- */
-async function ensureFolderExists(
-	client: AzureDevOpsClient,
-	folderPath: string,
-	project?: string
-): Promise<void> {
-	// The correct endpoint is PUT _apis/build/folders?path={path}
-	const endpoint = `_apis/build/folders?path=${encodeURIComponent(folderPath)}`;
-
-	try {
-		await client.put(
-			endpoint,
-			{ path: folderPath },
-			{ project }
-		);
-	} catch (error) {
-		// Folder might already exist, ignore 409 Conflict
-		const message = error instanceof Error ? error.message : "";
-		if (!message.includes("409")) {
-			// Also ignore 400 Bad Request which might mean the folder exists in some versions
-			if (!message.includes("400")) {
-				// If strictly 404, it might mean the API is not supported or project not found
-				// But we'll let it bubble up if it's not a "exists" error
-				throw error;
-			}
-		}
-	}
-}
-
-/**
  * Creates a dummy pipeline for YAML validation.
  */
 export async function createDummyPipeline(
 	repositoryId: string,
 	project?: string,
-	yamlPath: string = "azure-pipelines.yml"
+	yamlPath: string = "/azure-pipelines.yml"
 ): Promise<CreateDummyPipelineResult> {
 	const client = new AzureDevOpsClient();
 
@@ -307,8 +286,14 @@ export async function createDummyPipeline(
 		throw new Error("Project must be provided via the 'project' argument or AZURE_DEVOPS_PROJECT environment variable.");
 	}
 
+	// Normalize yamlPath to start with /
+	let normalizedYamlPath = yamlPath.trim();
+	if (!normalizedYamlPath.startsWith("/")) {
+		normalizedYamlPath = "/" + normalizedYamlPath;
+	}
+
 	// Ensure folder exists
-	await ensureFolderExists(client, DUMMY_PIPELINE_FOLDER, project);
+	await client.ensureFolderExists(DUMMY_PIPELINE_FOLDER, project);
 
 	// Create the pipeline
 	const endpoint = "_apis/pipelines";
@@ -317,7 +302,7 @@ export async function createDummyPipeline(
 		folder: DUMMY_PIPELINE_FOLDER,
 		configuration: {
 			type: "yaml",
-			path: yamlPath,
+			path: normalizedYamlPath,
 			repository: {
 				id: repositoryId,
 				type: "azureReposGit",

@@ -12,12 +12,15 @@ export function getVariablesReference(category?: string): string {
   if (!category) {
     const overview = {
       description: variablesData.description,
-      availableCategories: CATEGORIES.map((key) => ({
-        id: key,
-        title: variablesData.categories[key].title,
-        description: variablesData.categories[key].description,
-        count: variablesData.categories[key].variables.length,
-      })),
+      availableCategories: CATEGORIES.map((key) => {
+        const cat = variablesData.categories[key];
+        return {
+          id: key,
+          title: cat.title,
+          description: "description" in cat ? cat.description : undefined,
+          count: cat.variables.length,
+        };
+      }),
     };
     return JSON.stringify(overview, null, 2);
   }
