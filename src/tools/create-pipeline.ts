@@ -28,14 +28,14 @@ interface PipelineResponse {
  * Creates a YAML pipeline in Azure DevOps.
  * @param name Pipeline name
  * @param repositoryId Repository ID
- * @param yamlPath Path to the YAML file in the repository (default: "azure-pipelines.yml")
+ * @param yamlPath Path to the YAML file in the repository (default: "/azure-pipelines.yml")
  * @param folder Optional folder path (e.g., "\\CI\\Builds")
  * @param project Optional project name override
  */
 export async function createPipeline(
 	name: string,
 	repositoryId: string,
-	yamlPath: string = "azure-pipelines.yml",
+	yamlPath: string = "/azure-pipelines.yml",
 	folder?: string,
 	project?: string
 ): Promise<CreatePipelineResult> {
@@ -123,13 +123,13 @@ export function registerCreatePipelineTools(server: McpServer): void {
 					.string()
 					.optional()
 					.describe(
-						"Path to the YAML file in the repository. Defaults to 'azure-pipelines.yml'"
+						"Path to the YAML file in the repository. Defaults to '/azure-pipelines.yml'"
 					),
 				folder: z
 					.string()
 					.optional()
 					.describe(
-						"Optional folder path for the pipeline (e.g., '\\\\CI\\\\Builds'). " +
+						"Optional folder path for the pipeline (e.g., '\\CI\\Builds'). " +
 						"The folder will be created if it doesn't exist."
 					),
 				project: z

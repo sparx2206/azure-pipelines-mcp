@@ -191,7 +191,7 @@ export function registerValidatePipelineTools(server: McpServer): void {
 					.string()
 					.optional()
 					.describe(
-						"Path to the YAML file in the repository. Defaults to 'azure-pipelines.yml'"
+						"Path to the YAML file in the repository. Defaults to '/azure-pipelines.yml'"
 					),
 			},
 		},
@@ -278,12 +278,18 @@ interface PipelineResponse {
 export async function createDummyPipeline(
 	repositoryId: string,
 	project?: string,
-	yamlPath: string = "azure-pipelines.yml"
+	yamlPath: string = "/azure-pipelines.yml"
 ): Promise<CreateDummyPipelineResult> {
 	const client = new AzureDevOpsClient();
 
 	if (!project && !client.getProject()) {
 		throw new Error("Project must be provided via the 'project' argument or AZURE_DEVOPS_PROJECT environment variable.");
+	}
+
+	// Normalize yamlPath to start with /
+	let normalizedYamlPath = yamlPath.trim();
+	if (!normalizedYamlPath.startsWith("/")) {
+		normalizedYamlPath = "/" + normalizedYamlPath;
 	}
 
 	// Ensure folder exists
@@ -296,7 +302,7 @@ export async function createDummyPipeline(
 		folder: DUMMY_PIPELINE_FOLDER,
 		configuration: {
 			type: "yaml",
-			path: yamlPath,
+			path: normalizedYamlPath,
 			repository: {
 				id: repositoryId,
 				type: "azureReposGit",
