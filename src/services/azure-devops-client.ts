@@ -186,4 +186,36 @@ export class AzureDevOpsClient extends HttpClient {
 			clearTimeout(timeoutId);
 		}
 	}
+
+	/**
+	 * Ensures a folder exists in Azure DevOps build folders.
+	 * Creates the folder if it doesn't exist, ignores errors if it already exists.
+	 * @param folderPath The folder path (e.g., "\\AI\\DummyValidationPipeline")
+	 * @param project Optional project override
+	 */
+	async ensureFolderExists(
+		folderPath: string,
+		project?: string
+	): Promise<void> {
+		const endpoint = `_apis/build/folders?path=${encodeURIComponent(folderPath)}`;
+
+		try {
+			await this.put(
+				endpoint,
+				{ path: folderPath },
+				{ project }
+			);
+		} catch (error) {
+			// Folder might already exist, ignore 409 Conflict
+			const message = error instanceof Error ? error.message : "";
+			if (!message.includes("409")) {
+				// Also ignore 400 Bad Request which might mean the folder exists in some versions
+				if (!message.includes("400")) {
+					// If strictly 404, it might mean the API is not supported or project not found
+					// But we'll let it bubble up if it's not a "exists" error
+					throw error;
+				}
+			}
+		}
+	}
 }
