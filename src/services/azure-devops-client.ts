@@ -206,15 +206,9 @@ export class AzureDevOpsClient extends HttpClient {
 				{ project }
 			);
 		} catch (error) {
-			// Folder might already exist, ignore 409 Conflict
 			const message = error instanceof Error ? error.message : "";
-			if (!message.includes("409")) {
-				// Also ignore 400 Bad Request which might mean the folder exists in some versions
-				if (!message.includes("400")) {
-					// If strictly 404, it might mean the API is not supported or project not found
-					// But we'll let it bubble up if it's not a "exists" error
-					throw error;
-				}
+			if (!message.includes("409") && !message.includes("400")) {
+				throw error;
 			}
 		}
 	}

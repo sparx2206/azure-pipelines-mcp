@@ -25,6 +25,22 @@ interface PipelineResponse {
 }
 
 /**
+ * Request body for creating a pipeline.
+ */
+interface CreatePipelineRequestBody {
+	name: string;
+	folder?: string;
+	configuration: {
+		type: string;
+		path: string;
+		repository: {
+			id: string;
+			type: string;
+		};
+	};
+}
+
+/**
  * Creates a YAML pipeline in Azure DevOps.
  * @param name Pipeline name
  * @param repositoryId Repository ID
@@ -60,18 +76,7 @@ export async function createPipeline(
 
 	// Create the pipeline
 	const endpoint = "_apis/pipelines";
-	const body: {
-		name: string;
-		folder?: string;
-		configuration: {
-			type: string;
-			path: string;
-			repository: {
-				id: string;
-				type: string;
-			};
-		};
-	} = {
+	const body: CreatePipelineRequestBody = {
 		name,
 		configuration: {
 			type: "yaml",
