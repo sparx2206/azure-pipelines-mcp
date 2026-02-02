@@ -5,6 +5,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getDefaultHttpClient, NotFoundError } from "../services/http-client.js";
+import { AzureDevOpsClient, TaskDefinition } from "../services/azure-devops-client.js";
 
 // URL pro index.md s task referencí
 export const TASK_INDEX_URL =
@@ -37,6 +38,7 @@ export interface SearchTasksResult {
 	totalCount: number;
 	query: string;
 	category?: TaskCategory;
+	source: "azure-devops-api" | "public-docs";
 }
 
 /**
@@ -49,6 +51,12 @@ const CATEGORY_MAPPING: Record<string, TaskCategory> = {
 	"test tasks": "test",
 	"tool tasks": "tool",
 	"utility tasks": "utility",
+	"build": "build",
+	"deploy": "deploy",
+	"package": "package",
+	"test": "test",
+	"tool": "tool",
+	"utility": "utility"
 };
 
 /**
@@ -115,6 +123,25 @@ export function parseTaskIndex(markdown: string): PipelineTask[] {
 }
 
 /**
+ * Konvertuje TaskDefinition z API na PipelineTask.
+ */
+function convertApiTaskToPipelineTask(apiTask: TaskDefinition): PipelineTask {
+	const category = (apiTask.category && CATEGORY_MAPPING[apiTask.category.toLowerCase()]) || "utility";
+	const version = `${apiTask.version.major}`;
+	
+	return {
+		name: apiTask.name,
+		displayName: apiTask.friendlyName,
+		version: version,
+		fullName: `${apiTask.name}@${version}`,
+		description: apiTask.description,
+		category: category,
+		// Konstrukce URL pro dokumentaci - best effort pro built-in tasky
+		documentationPath: `https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/${apiTask.name.toLowerCase()}-v${version}`
+	};
+}
+
+/**
  * Vyhledá tasky podle query a volitelné kategorie.
  */
 export function searchTasks(
@@ -147,6 +174,31 @@ export async function handleSearchPipelineTasks(
 	query: string,
 	category?: TaskCategory
 ): Promise<string> {
+	// 1. Zkusíme použít Azure DevOps API, pokud máme konfiguraci
+	try {
+		const client = new AzureDevOpsClient();
+		const apiTasks = await client.getTaskDefinitions();
+		const pipelineTasks = apiTasks.map(convertApiTaskToPipelineTask);
+		const matchedTasks = searchTasks(pipelineTasks, query, category);
+
+		const result: SearchTasksResult = {
+			tasks: matchedTasks,
+			totalCount: matchedTasks.length,
+			query,
+			category,
+			source: "azure-devops-api"
+		};
+
+		return JSON.stringify(result, null, 2);
+	} catch (error) {
+		// Pokud se nepodaří připojit k API (chybí config nebo chyba sítě), fallback na veřejné dokumentace
+		// Ignorujeme chybu konfigurace, ale ostatní chyby můžeme logovat
+		if (!(error instanceof Error && error.message.includes("Organization and Personal Access Token must be provided"))) {
+			// console.error("Failed to fetch tasks from Azure DevOps API, falling back to public docs:", error);
+		}
+	}
+
+	// 2. Fallback na veřejné dokumentace
 	const httpClient = getDefaultHttpClient();
 
 	try {
@@ -159,6 +211,7 @@ export async function handleSearchPipelineTasks(
 			totalCount: matchedTasks.length,
 			query,
 			category,
+			source: "public-docs"
 		};
 
 		return JSON.stringify(result, null, 2);

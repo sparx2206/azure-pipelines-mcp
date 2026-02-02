@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { AzureDevOpsClient } from "../../src/services/azure-devops-client.js";
 import { resetDefaultHttpClient } from "../../src/services/http-client.js";
+import { resetDefaultCache } from "../../src/services/cache.js";
 
 // Mock environment variables
 const originalEnv = process.env;
@@ -9,6 +10,7 @@ describe("AzureDevOpsClient", () => {
 	beforeEach(() => {
 		process.env = { ...originalEnv };
 		resetDefaultHttpClient();
+		resetDefaultCache();
 		vi.restoreAllMocks();
 	});
 
@@ -118,5 +120,56 @@ describe("AzureDevOpsClient", () => {
 				}),
 			})
 		);
+	});
+
+	it("should get task definitions", async () => {
+		const client = new AzureDevOpsClient({
+			org: "test-org",
+			pat: "test-pat",
+		});
+
+		const mockTasks = {
+			value: [
+				{
+					id: "task-id-1",
+					name: "TestTask",
+					friendlyName: "Test Task",
+					description: "Description",
+					version: { major: 1, minor: 0, patch: 0, isTest: false },
+				},
+			],
+		};
+
+		const mockFetch = vi.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			text: () => Promise.resolve(JSON.stringify(mockTasks)),
+		});
+		global.fetch = mockFetch;
+
+		const tasks = await client.getTaskDefinitions();
+
+		expect(tasks).toEqual(mockTasks.value);
+		expect(mockFetch).toHaveBeenCalledWith(
+			"https://dev.azure.com/test-org/_apis/distributedtask/tasks?api-version=7.1",
+			expect.any(Object)
+		);
+	});
+
+	it("should throw on API error", async () => {
+		const client = new AzureDevOpsClient({
+			org: "test-org",
+			pat: "test-pat",
+		});
+
+		const mockFetch = vi.fn().mockResolvedValue({
+			ok: false,
+			status: 500,
+			statusText: "Internal Server Error",
+			text: () => Promise.resolve("Error"),
+		});
+		global.fetch = mockFetch;
+
+		await expect(client.getTaskDefinitions()).rejects.toThrow("HTTP 500");
 	});
 });
