@@ -2,8 +2,15 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
 	parseTaskIndex,
 	searchTasks,
+	handleSearchPipelineTasks,
+	TASK_INDEX_URL,
 	PipelineTask,
 } from "../../src/tools/search-tasks.js";
+import { resetDefaultHttpClient } from "../../src/services/http-client.js";
+import { resetDefaultCache } from "../../src/services/cache.js";
+
+// Mock environment variables
+const originalEnv = process.env;
 
 // Sample markdown pro testování parseru
 const SAMPLE_INDEX_MARKDOWN = `
@@ -172,5 +179,129 @@ describe("searchTasks", () => {
 
 		expect(resultsLower.length).toBe(resultsUpper.length);
 		expect(resultsLower.length).toBe(resultsMixed.length);
+	});
+});
+
+describe("handleSearchPipelineTasks", () => {
+	beforeEach(() => {
+		process.env = { ...originalEnv };
+		resetDefaultHttpClient();
+		resetDefaultCache();
+		vi.restoreAllMocks();
+	});
+
+	afterEach(() => {
+		process.env = originalEnv;
+	});
+
+	it("should use Azure DevOps API when credentials are present", async () => {
+		process.env.AZURE_DEVOPS_ORG = "test-org";
+		process.env.AZURE_DEVOPS_PAT = "test-pat";
+
+		const mockApiTasks = {
+			value: [
+				{
+					id: "task-1",
+					name: "ApiTask",
+					friendlyName: "API Task",
+					description: "Task from API",
+					category: "Build",
+					version: { major: 2, minor: 0, patch: 0, isTest: false },
+				},
+			],
+		};
+
+		const mockFetch = vi.fn().mockImplementation((url) => {
+			if (url.includes("_apis/distributedtask/tasks")) {
+				return Promise.resolve({
+					ok: true,
+					status: 200,
+					text: () => Promise.resolve(JSON.stringify(mockApiTasks)),
+				});
+			}
+			return Promise.reject(new Error(`Unexpected URL: ${url}`));
+		});
+		global.fetch = mockFetch;
+
+		const resultJson = await handleSearchPipelineTasks("ApiTask");
+		const result = JSON.parse(resultJson);
+
+		expect(result.source).toBe("azure-devops-api");
+		expect(result.tasks).toHaveLength(1);
+		expect(result.tasks[0].name).toBe("ApiTask");
+		expect(result.tasks[0].category).toBe("build"); // Lowercased
+		expect(mockFetch).toHaveBeenCalledWith(
+			expect.stringContaining("_apis/distributedtask/tasks"),
+			expect.any(Object)
+		);
+	});
+
+	it("should fallback to public docs when credentials are missing", async () => {
+		delete process.env.AZURE_DEVOPS_ORG;
+		delete process.env.AZURE_DEVOPS_PAT;
+
+		const mockFetch = vi.fn().mockImplementation((url) => {
+			if (url === TASK_INDEX_URL) {
+				return Promise.resolve({
+					ok: true,
+					status: 200,
+					text: () => Promise.resolve(SAMPLE_INDEX_MARKDOWN),
+				});
+			}
+			return Promise.reject(new Error(`Unexpected URL: ${url}`));
+		});
+		global.fetch = mockFetch;
+
+		const resultJson = await handleSearchPipelineTasks("Docker");
+		const result = JSON.parse(resultJson);
+
+		expect(result.source).toBe("public-docs");
+		expect(result.tasks.length).toBeGreaterThan(0);
+		expect(result.tasks.some((t: any) => t.name === "Docker")).toBe(true);
+		expect(mockFetch).toHaveBeenCalledWith(
+			TASK_INDEX_URL,
+			expect.any(Object)
+		);
+	});
+
+	it("should fallback to public docs when API call fails", async () => {
+		process.env.AZURE_DEVOPS_ORG = "test-org";
+		process.env.AZURE_DEVOPS_PAT = "test-pat";
+
+		const mockFetch = vi.fn().mockImplementation((url) => {
+			if (url.includes("_apis/distributedtask/tasks")) {
+				return Promise.resolve({
+					ok: false,
+					status: 500,
+					statusText: "Internal Server Error",
+					text: () => Promise.resolve("Error"),
+				});
+			}
+			if (url === TASK_INDEX_URL) {
+				return Promise.resolve({
+					ok: true,
+					status: 200,
+					text: () => Promise.resolve(SAMPLE_INDEX_MARKDOWN),
+				});
+			}
+			return Promise.reject(new Error(`Unexpected URL: ${url}`));
+		});
+		global.fetch = mockFetch;
+
+		const resultJson = await handleSearchPipelineTasks("Docker");
+		const result = JSON.parse(resultJson);
+
+		expect(result.source).toBe("public-docs");
+		expect(result.tasks.length).toBeGreaterThan(0);
+		// API call was attempted
+		expect(mockFetch).toHaveBeenCalledWith(
+			expect.stringContaining("_apis/distributedtask/tasks"),
+			expect.any(Object)
+		);
+		// Fallback to docs was used
+		expect(mockFetch).toHaveBeenCalledWith(
+			TASK_INDEX_URL,
+			expect.any(Object)
+		);
 	});
 });

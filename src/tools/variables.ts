@@ -15,7 +15,7 @@ export function getVariablesReference(category?: string): string {
       availableCategories: CATEGORIES.map((key) => ({
         id: key,
         title: variablesData.categories[key].title,
-        description: variablesData.categories[key].description,
+        description: "description" in variablesData.categories[key] ? variablesData.categories[key].description : undefined,
         count: variablesData.categories[key].variables.length,
       })),
     };

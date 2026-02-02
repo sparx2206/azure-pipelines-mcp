@@ -5,6 +5,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getDefaultHttpClient, NotFoundError } from "../services/http-client.js";
+import { AzureDevOpsClient, TaskDefinition, TaskInputDefinition } from "../services/azure-devops-client.js";
 
 // URL pro index.md s task referencí
 export const TASK_INDEX_URL =
@@ -22,6 +23,16 @@ const TASK_CATEGORIES = [
 
 export type TaskCategory = (typeof TASK_CATEGORIES)[number];
 
+export interface PipelineTaskInput {
+	name: string;
+	type: string;
+	label: string;
+	defaultValue?: string;
+	required?: boolean;
+	helpMarkDown?: string;
+	options?: Record<string, string>;
+}
+
 export interface PipelineTask {
 	name: string; // např. "DotNetCoreCLI"
 	displayName: string; // např. ".NET Core"
@@ -30,6 +41,7 @@ export interface PipelineTask {
 	description: string;
 	category: TaskCategory;
 	documentationPath: string; // např. "dotnet-core-cli-v2.md"
+	inputs?: PipelineTaskInput[];
 }
 
 export interface SearchTasksResult {
@@ -37,6 +49,7 @@ export interface SearchTasksResult {
 	totalCount: number;
 	query: string;
 	category?: TaskCategory;
+	source: "azure-devops-api" | "public-docs";
 }
 
 /**
@@ -49,6 +62,12 @@ const CATEGORY_MAPPING: Record<string, TaskCategory> = {
 	"test tasks": "test",
 	"tool tasks": "tool",
 	"utility tasks": "utility",
+	"build": "build",
+	"deploy": "deploy",
+	"package": "package",
+	"test": "test",
+	"tool": "tool",
+	"utility": "utility"
 };
 
 /**
@@ -115,6 +134,68 @@ export function parseTaskIndex(markdown: string): PipelineTask[] {
 }
 
 /**
+ * Převede PascalCase na kebab-case.
+ * Např. "DotNetCoreCLI" -> "dot-net-core-cli"
+ * Ale pozor, Microsoft pravidla jsou trochu specifická, zkusíme best effort.
+ * Zpravidla vkládá pomlčku před velkým písmenem, pokud to není první písmeno.
+ */
+function pascalToKebabCase(str: string): string {
+	return str
+		.replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+		.replace(/([A-Z])([A-Z])(?=[a-z])/g, "$1-$2")
+		.toLowerCase();
+}
+
+/**
+ * Pokusí se extrahovat odkaz na dokumentaci z helpMarkDown.
+ */
+function extractDocLink(helpMarkDown?: string): string | undefined {
+	if (!helpMarkDown) return undefined;
+	// Hledáme formát [text](url)
+	const match = helpMarkDown.match(/\[.*?\]\((https?:\/\/[^)]+)\)/);
+	return match ? match[1] : undefined;
+}
+
+/**
+ * Konvertuje TaskDefinition z API na PipelineTask.
+ */
+function convertApiTaskToPipelineTask(apiTask: TaskDefinition): PipelineTask {
+	const category = (apiTask.category && CATEGORY_MAPPING[apiTask.category.toLowerCase()]) || "utility";
+	const version = `${apiTask.version.major}`;
+	
+	// Priorita:
+	// 1. helpUrl (přímý odkaz)
+	// 2. Link extrahovaný z helpMarkDown (často přesný odkaz na learn.microsoft.com nebo GitHub)
+	// 3. Generovaný odkaz pomocí kebab-case (pro built-in tasky)
+	
+	let documentationPath = apiTask.helpUrl || extractDocLink(apiTask.helpMarkDown);
+	
+	if (!documentationPath) {
+		const kebabName = pascalToKebabCase(apiTask.name);
+		documentationPath = `https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/${kebabName}-v${version}`;
+	}
+
+	return {
+		name: apiTask.name,
+		displayName: apiTask.friendlyName,
+		version: version,
+		fullName: `${apiTask.name}@${version}`,
+		description: apiTask.description,
+		category: category,
+		documentationPath: documentationPath,
+		inputs: apiTask.inputs?.map(input => ({
+			name: input.name,
+			type: input.type,
+			label: input.label,
+			defaultValue: input.defaultValue,
+			required: input.required,
+			helpMarkDown: input.helpMarkDown,
+			options: input.options
+		}))
+	};
+}
+
+/**
  * Vyhledá tasky podle query a volitelné kategorie.
  */
 export function searchTasks(
@@ -147,6 +228,31 @@ export async function handleSearchPipelineTasks(
 	query: string,
 	category?: TaskCategory
 ): Promise<string> {
+	// 1. Zkusíme použít Azure DevOps API, pokud máme konfiguraci
+	try {
+		const client = new AzureDevOpsClient();
+		const apiTasks = await client.getTaskDefinitions();
+		const pipelineTasks = apiTasks.map(convertApiTaskToPipelineTask);
+		const matchedTasks = searchTasks(pipelineTasks, query, category);
+
+		const result: SearchTasksResult = {
+			tasks: matchedTasks,
+			totalCount: matchedTasks.length,
+			query,
+			category,
+			source: "azure-devops-api"
+		};
+
+		return JSON.stringify(result, null, 2);
+	} catch (error) {
+		// Pokud se nepodaří připojit k API (chybí config nebo chyba sítě), fallback na veřejné dokumentace
+		// Ignorujeme chybu konfigurace, ale ostatní chyby můžeme logovat
+		if (!(error instanceof Error && error.message.includes("Organization and Personal Access Token must be provided"))) {
+			// console.error("Failed to fetch tasks from Azure DevOps API, falling back to public docs:", error);
+		}
+	}
+
+	// 2. Fallback na veřejné dokumentace
 	const httpClient = getDefaultHttpClient();
 
 	try {
@@ -159,6 +265,7 @@ export async function handleSearchPipelineTasks(
 			totalCount: matchedTasks.length,
 			query,
 			category,
+			source: "public-docs"
 		};
 
 		return JSON.stringify(result, null, 2);

@@ -186,4 +186,46 @@ export class AzureDevOpsClient extends HttpClient {
 			clearTimeout(timeoutId);
 		}
 	}
+
+	/**
+	 * Získá seznam definicí tasků v organizaci.
+	 */
+	async getTaskDefinitions(): Promise<TaskDefinition[]> {
+		// Endpoint pro získání všech tasků v organizaci
+		// Dokumentace: https://learn.microsoft.com/en-us/rest/api/azure/devops/distributedtask/tasks/list
+		const result = await this.get<{ value: TaskDefinition[] }>(
+			"_apis/distributedtask/tasks"
+		);
+		return result.value;
+	}
+}
+
+export interface TaskDefinition {
+	id: string;
+	name: string;
+	friendlyName: string;
+	description: string;
+	helpMarkDown?: string;
+	helpUrl?: string;
+	category?: string;
+	visibility?: string[];
+	runsOn?: string[];
+	version: {
+		major: number;
+		minor: number;
+		patch: number;
+		isTest: boolean;
+	};
+	instanceNameFormat?: string;
+	inputs?: TaskInputDefinition[];
+}
+
+export interface TaskInputDefinition {
+	name: string;
+	type: string;
+	label: string;
+	defaultValue?: string;
+	required?: boolean;
+	helpMarkDown?: string;
+	options?: Record<string, string>;
 }
