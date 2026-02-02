@@ -86,7 +86,6 @@ function generateSyntax(name: string, version: string, inputs: TaskInput[]): str
  * Extrahuje popis tasku z front matter nebo description sekce.
  */
 export function parseDescription(markdown: string): string {
-	// ... (stávající implementace)
 	// Zkusíme front matter (description: ...)
 	const frontMatterMatch = markdown.match(
 		/^---\s*\n[\s\S]*?description:\s*(.+?)\s*\n[\s\S]*?---/
@@ -105,8 +104,6 @@ export function parseDescription(markdown: string): string {
 
 	return "";
 }
-
-// ... (ostatní parsovací funkce zůstávají stejné, zkracuji pro přehlednost v replace) ...
 
 /**
  * Extrahuje první YAML syntax blok ze syntax sekce.
