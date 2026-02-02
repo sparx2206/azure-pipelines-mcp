@@ -375,7 +375,9 @@ export async function handleGetTaskReference(taskName: string): Promise<string> 
 
 	if (taskInfo) {
 		// Fetchneme dokumentaci
-		const docUrl = `${TASK_REFERENCE_BASE_URL}${taskInfo.documentationPath}`;
+		const docUrl = taskInfo.documentationPath.startsWith("http")
+			? taskInfo.documentationPath
+			: `${TASK_REFERENCE_BASE_URL}${taskInfo.documentationPath}`;
 		try {
 			const markdown = await httpClient.fetch(docUrl, { cacheTtlMs: TASK_REFERENCE_CACHE_TTL_MS });
 			const reference = parseTaskMarkdown(markdown, name, version);
