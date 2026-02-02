@@ -5,7 +5,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getDefaultHttpClient, NotFoundError } from "../services/http-client.js";
-import { AzureDevOpsClient, TaskDefinition } from "../services/azure-devops-client.js";
+import { AzureDevOpsClient, TaskDefinition, TaskInputDefinition } from "../services/azure-devops-client.js";
 
 // URL pro index.md s task referencí
 export const TASK_INDEX_URL =
@@ -23,6 +23,16 @@ const TASK_CATEGORIES = [
 
 export type TaskCategory = (typeof TASK_CATEGORIES)[number];
 
+export interface PipelineTaskInput {
+	name: string;
+	type: string;
+	label: string;
+	defaultValue?: string;
+	required?: boolean;
+	helpMarkDown?: string;
+	options?: Record<string, string>;
+}
+
 export interface PipelineTask {
 	name: string; // např. "DotNetCoreCLI"
 	displayName: string; // např. ".NET Core"
@@ -31,6 +41,7 @@ export interface PipelineTask {
 	description: string;
 	category: TaskCategory;
 	documentationPath: string; // např. "dotnet-core-cli-v2.md"
+	inputs?: PipelineTaskInput[];
 }
 
 export interface SearchTasksResult {
@@ -123,12 +134,46 @@ export function parseTaskIndex(markdown: string): PipelineTask[] {
 }
 
 /**
+ * Převede PascalCase na kebab-case.
+ * Např. "DotNetCoreCLI" -> "dot-net-core-cli"
+ * Ale pozor, Microsoft pravidla jsou trochu specifická, zkusíme best effort.
+ * Zpravidla vkládá pomlčku před velkým písmenem, pokud to není první písmeno.
+ */
+function pascalToKebabCase(str: string): string {
+	return str
+		.replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+		.replace(/([A-Z])([A-Z])(?=[a-z])/g, "$1-$2")
+		.toLowerCase();
+}
+
+/**
+ * Pokusí se extrahovat odkaz na dokumentaci z helpMarkDown.
+ */
+function extractDocLink(helpMarkDown?: string): string | undefined {
+	if (!helpMarkDown) return undefined;
+	// Hledáme formát [text](url)
+	const match = helpMarkDown.match(/\[.*?\]\((https?:\/\/[^)]+)\)/);
+	return match ? match[1] : undefined;
+}
+
+/**
  * Konvertuje TaskDefinition z API na PipelineTask.
  */
 function convertApiTaskToPipelineTask(apiTask: TaskDefinition): PipelineTask {
 	const category = (apiTask.category && CATEGORY_MAPPING[apiTask.category.toLowerCase()]) || "utility";
 	const version = `${apiTask.version.major}`;
 	
+	// Priorita:
+	// 1. Link extrahovaný z helpMarkDown (často přesný odkaz na learn.microsoft.com nebo GitHub)
+	// 2. Generovaný odkaz pomocí kebab-case (pro built-in tasky)
+	
+	let documentationPath = extractDocLink(apiTask.helpMarkDown);
+	
+	if (!documentationPath) {
+		const kebabName = pascalToKebabCase(apiTask.name);
+		documentationPath = `https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/${kebabName}-v${version}`;
+	}
+
 	return {
 		name: apiTask.name,
 		displayName: apiTask.friendlyName,
@@ -136,8 +181,16 @@ function convertApiTaskToPipelineTask(apiTask: TaskDefinition): PipelineTask {
 		fullName: `${apiTask.name}@${version}`,
 		description: apiTask.description,
 		category: category,
-		// Konstrukce URL pro dokumentaci - best effort pro built-in tasky
-		documentationPath: `https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/${apiTask.name.toLowerCase()}-v${version}`
+		documentationPath: documentationPath,
+		inputs: apiTask.inputs?.map(input => ({
+			name: input.name,
+			type: input.type,
+			label: input.label,
+			defaultValue: input.defaultValue,
+			required: input.required,
+			helpMarkDown: input.helpMarkDown,
+			options: input.options
+		}))
 	};
 }
 
