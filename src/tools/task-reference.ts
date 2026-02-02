@@ -407,3 +407,34 @@ export async function handleGetTaskReference(taskName: string): Promise<string> 
 	}
 }
 
+/**
+ * Registruje get_task_reference tool na MCP server.
+ */
+export function registerTaskReferenceTools(server: McpServer): void {
+	server.registerTool(
+		"get_task_reference",
+		{
+			title: "Get Task Reference",
+			description:
+				"Get detailed reference documentation for a specific Azure Pipelines task — inputs, syntax, output variables, and examples. Use search_pipeline_tasks first to find the correct task name.",
+			inputSchema: {
+				taskName: z
+					.string()
+					.describe(
+						"Task name with version in format TaskName@Version (e.g., DotNetCoreCLI@2, Docker@2)."
+					),
+			},
+		},
+		async ({ taskName }) => {
+			return {
+				content: [
+					{
+						type: "text" as const,
+						text: await handleGetTaskReference(taskName),
+					},
+				],
+			};
+		}
+	);
+}
+
