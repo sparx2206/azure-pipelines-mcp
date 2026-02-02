@@ -164,10 +164,11 @@ function convertApiTaskToPipelineTask(apiTask: TaskDefinition): PipelineTask {
 	const version = `${apiTask.version.major}`;
 	
 	// Priorita:
-	// 1. Link extrahovaný z helpMarkDown (často přesný odkaz na learn.microsoft.com nebo GitHub)
-	// 2. Generovaný odkaz pomocí kebab-case (pro built-in tasky)
+	// 1. helpUrl (přímý odkaz)
+	// 2. Link extrahovaný z helpMarkDown (často přesný odkaz na learn.microsoft.com nebo GitHub)
+	// 3. Generovaný odkaz pomocí kebab-case (pro built-in tasky)
 	
-	let documentationPath = extractDocLink(apiTask.helpMarkDown);
+	let documentationPath = apiTask.helpUrl || extractDocLink(apiTask.helpMarkDown);
 	
 	if (!documentationPath) {
 		const kebabName = pascalToKebabCase(apiTask.name);

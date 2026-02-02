@@ -6,6 +6,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getDefaultHttpClient, NotFoundError } from "../services/http-client.js";
 import { TASK_INDEX_URL, parseTaskIndex, type PipelineTask } from "./search-tasks.js";
+import { AzureDevOpsClient, TaskDefinition } from "../services/azure-devops-client.js";
 
 const TASK_REFERENCE_BASE_URL =
 	"https://raw.githubusercontent.com/MicrosoftDocs/azure-devops-yaml-schema/main/task-reference/";
@@ -37,9 +38,55 @@ export interface TaskReference {
 }
 
 /**
+ * Konvertuje TaskDefinition z API na formát TaskReference.
+ */
+function convertTaskDefinitionToReference(task: TaskDefinition): TaskReference {
+	const version = `${task.version.major}`;
+	const fullName = `${task.name}@${version}`;
+	
+	const inputs: TaskInput[] = task.inputs?.map(input => ({
+		name: input.name,
+		label: input.label,
+		type: input.type,
+		required: input.required ?? false,
+		defaultValue: input.defaultValue,
+		helpText: input.helpMarkDown,
+		allowedValues: input.options ? Object.keys(input.options) : undefined
+	})) ?? [];
+
+	return {
+		name: task.name,
+		version,
+		fullName,
+		description: task.description,
+		// Syntax generujeme dynamicky z vstupů pro API tasky
+		syntax: generateSyntax(task.name, version, inputs),
+		inputs,
+		outputVariables: [], // API typicky nevrací output variables strukturovaně v tomto endpointu
+		remarks: task.helpMarkDown
+	};
+}
+
+/**
+ * Generuje YAML syntaxi pro task.
+ */
+function generateSyntax(name: string, version: string, inputs: TaskInput[]): string {
+	let syntax = `- task: ${name}@${version}\n  inputs:\n`;
+	
+	for (const input of inputs) {
+		const comment = input.required ? "" : " # Optional";
+		const value = input.defaultValue ? input.defaultValue : "string";
+		syntax += `    ${input.name}: ${value}${comment}\n`;
+	}
+	
+	return syntax;
+}
+
+/**
  * Extrahuje popis tasku z front matter nebo description sekce.
  */
 export function parseDescription(markdown: string): string {
+	// ... (stávající implementace)
 	// Zkusíme front matter (description: ...)
 	const frontMatterMatch = markdown.match(
 		/^---\s*\n[\s\S]*?description:\s*(.+?)\s*\n[\s\S]*?---/
@@ -58,6 +105,8 @@ export function parseDescription(markdown: string): string {
 
 	return "";
 }
+
+// ... (ostatní parsovací funkce zůstávají stejné, zkracuji pro přehlednost v replace) ...
 
 /**
  * Extrahuje první YAML syntax blok ze syntax sekce.
@@ -282,6 +331,29 @@ async function findTaskInIndex(fullName: string): Promise<PipelineTask | null> {
 }
 
 /**
+ * Zkusí najít task pomocí Azure DevOps API.
+ */
+async function findTaskInOrganization(taskName: string, version: string): Promise<TaskReference | null> {
+	try {
+		const client = new AzureDevOpsClient();
+		const apiTasks = await client.getTaskDefinitions();
+		
+		// Najdeme přesnou shodu jména a major verze
+		const matchedTask = apiTasks.find(t => 
+			t.name.toLowerCase() === taskName.toLowerCase() && 
+			`${t.version.major}` === version
+		);
+		
+		if (matchedTask) {
+			return convertTaskDefinitionToReference(matchedTask);
+		}
+	} catch (error) {
+		// Ignorujeme chyby API (není nastaveno nebo chyba sítě)
+	}
+	return null;
+}
+
+/**
  * Handler pro get_task_reference tool.
  */
 export async function handleGetTaskReference(taskName: string): Promise<string> {
@@ -296,70 +368,42 @@ export async function handleGetTaskReference(taskName: string): Promise<string> 
 	const [, name, version] = taskMatch;
 	const httpClient = getDefaultHttpClient();
 
-	// Najdeme task v indexu pro documentationPath
-	let taskInfo: PipelineTask | null;
+	// 1. Zkusíme veřejnou dokumentaci
+	let taskInfo: PipelineTask | null = null;
 	try {
 		taskInfo = await findTaskInIndex(taskName);
 	} catch (error) {
-		if (error instanceof NotFoundError) {
-			return JSON.stringify({
-				error: "Task index not found. The documentation source may be unavailable.",
-				url: TASK_INDEX_URL,
-			});
-		}
-		throw error;
+		// Ignorujeme chybu indexu pro teď, zkusíme API fallback
 	}
 
+	if (taskInfo) {
+		// Fetchneme dokumentaci
+		const docUrl = `${TASK_REFERENCE_BASE_URL}${taskInfo.documentationPath}`;
+		try {
+			const markdown = await httpClient.fetch(docUrl, { cacheTtlMs: TASK_REFERENCE_CACHE_TTL_MS });
+			const reference = parseTaskMarkdown(markdown, name, version);
+			return JSON.stringify(reference, null, 2);
+		} catch (error) {
+			// Pokud dokumentace neexistuje, zkusíme API fallback
+		}
+	}
+
+	// 2. Fallback: Azure DevOps API
+	const apiReference = await findTaskInOrganization(name, version);
+	if (apiReference) {
+		return JSON.stringify(apiReference, null, 2);
+	}
+
+	// 3. Nic se nenašlo
 	if (!taskInfo) {
 		return JSON.stringify({
-			error: `Task '${taskName}' not found. Use search_pipeline_tasks to find available tasks.`,
+			error: `Task '${taskName}' not found in public index or organization.`,
+		});
+	} else {
+		return JSON.stringify({
+			error: `Documentation for task '${taskName}' not found in public docs or organization.`,
+			url: `${TASK_REFERENCE_BASE_URL}${taskInfo.documentationPath}`,
 		});
 	}
-
-	// Fetchneme dokumentaci
-	const docUrl = `${TASK_REFERENCE_BASE_URL}${taskInfo.documentationPath}`;
-	try {
-		const markdown = await httpClient.fetch(docUrl, { cacheTtlMs: TASK_REFERENCE_CACHE_TTL_MS });
-		const reference = parseTaskMarkdown(markdown, name, version);
-		return JSON.stringify(reference, null, 2);
-	} catch (error) {
-		if (error instanceof NotFoundError) {
-			return JSON.stringify({
-				error: `Documentation for task '${taskName}' not found.`,
-				url: docUrl,
-			});
-		}
-		throw error;
-	}
 }
 
-/**
- * Registruje get_task_reference tool na MCP server.
- */
-export function registerTaskReferenceTools(server: McpServer): void {
-	server.registerTool(
-		"get_task_reference",
-		{
-			title: "Get Task Reference",
-			description:
-				"Get detailed reference documentation for a specific Azure Pipelines task — inputs, syntax, output variables, and examples. Use search_pipeline_tasks first to find the correct task name.",
-			inputSchema: {
-				taskName: z
-					.string()
-					.describe(
-						"Task name with version in format TaskName@Version (e.g., DotNetCoreCLI@2, Docker@2)."
-					),
-			},
-		},
-		async ({ taskName }) => {
-			return {
-				content: [
-					{
-						type: "text" as const,
-						text: await handleGetTaskReference(taskName),
-					},
-				],
-			};
-		}
-	);
-}

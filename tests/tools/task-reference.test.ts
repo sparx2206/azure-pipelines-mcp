@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
 	parseDescription,
 	parseSyntax,
@@ -10,8 +10,13 @@ import {
 	parseTaskMarkdown,
 	handleGetTaskReference,
 } from "../../src/tools/task-reference.js";
+import { resetDefaultHttpClient } from "../../src/services/http-client.js";
+import { resetDefaultCache } from "../../src/services/cache.js";
 
-// Sample markdown simulující strukturu reálné task dokumentace
+// Mock environment variables
+const originalEnv = process.env;
+
+// Sample markdown pro testování
 const SAMPLE_TASK_MARKDOWN = `---
 title: DotNetCoreCLI@2 - .NET Core v2 task
 description: Build, test, package, or publish a .NET application.

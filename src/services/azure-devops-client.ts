@@ -206,6 +206,7 @@ export interface TaskDefinition {
 	friendlyName: string;
 	description: string;
 	helpMarkDown?: string;
+	helpUrl?: string;
 	category?: string;
 	visibility?: string[];
 	runsOn?: string[];
