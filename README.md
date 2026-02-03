@@ -101,6 +101,19 @@ If you are using an MCP extension in VS Code, configure it in `.vscode/settings.
 | `get_dummy_pipeline` | Utility to find a pipeline for validation context. |
 | `create_dummy_pipeline` | Utility to create a pipeline for validation context. |
 
+## Validation & Dummy Pipeline
+
+The `validate_pipeline_yaml` tool uses the official Azure DevOps "Pipeline Preview" API. This API requires the context of an **existing pipeline** to resolve variable groups, environments, and repository resources correctly.
+
+To facilitate this, the MCP server may need to create a placeholder pipeline in your project:
+
+1.  **Name:** `DummyValidationPipeline`
+2.  **Folder:** `\AI\` (to keep it organized and separate from real pipelines)
+3.  **Purpose:** It acts as a target for the "Preview" API call. It is **never executed** by the MCP server.
+4.  **Creation:** The `create_dummy_pipeline` tool creates this pipeline pointing to `azure-pipelines.yml` in your default repository.
+
+**Note:** If you delete this pipeline, the validation tool might prompt to recreate it.
+
 ## Development
 
 ### Setup
