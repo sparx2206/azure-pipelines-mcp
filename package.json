@@ -1,6 +1,6 @@
 {
   "name": "azure-pipelines-mcp",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "MCP server for Azure Pipelines YAML authoring assistance — validation, task reference, expressions, variables, and schema",
   "type": "module",
   "bin": {
@@ -31,8 +31,11 @@
     "azure-pipelines",
     "yaml",
     "validation",
-    "model-context-protocol"
+    "model-context-protocol",
+    "github-copilot",
+    "claude-desktop"
   ],
+  "author": "Petr Svoboda",
   "license": "MIT",
   "repository": {
     "type": "git",

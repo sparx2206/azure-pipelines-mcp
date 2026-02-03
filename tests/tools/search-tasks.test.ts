@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
 	parseTaskIndex,
 	searchTasks,
@@ -257,7 +257,7 @@ describe("handleSearchPipelineTasks", () => {
 
 		expect(result.source).toBe("public-docs");
 		expect(result.tasks.length).toBeGreaterThan(0);
-		expect(result.tasks.some((t: any) => t.name === "Docker")).toBe(true);
+		expect(result.tasks.some((t: PipelineTask) => t.name === "Docker")).toBe(true);
 		expect(mockFetch).toHaveBeenCalledWith(
 			TASK_INDEX_URL,
 			expect.any(Object)

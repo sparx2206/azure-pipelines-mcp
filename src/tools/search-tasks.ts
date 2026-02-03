@@ -5,7 +5,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getDefaultHttpClient, NotFoundError } from "../services/http-client.js";
-import { AzureDevOpsClient, TaskDefinition, TaskInputDefinition } from "../services/azure-devops-client.js";
+import { AzureDevOpsClient, TaskDefinition } from "../services/azure-devops-client.js";
 
 // URL pro index.md s task referencí
 export const TASK_INDEX_URL =

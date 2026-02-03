@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
 	parseDescription,
 	parseSyntax,
@@ -10,11 +10,6 @@ import {
 	parseTaskMarkdown,
 	handleGetTaskReference,
 } from "../../src/tools/task-reference.js";
-import { resetDefaultHttpClient } from "../../src/services/http-client.js";
-import { resetDefaultCache } from "../../src/services/cache.js";
-
-// Mock environment variables
-const originalEnv = process.env;
 
 // Sample markdown pro testování
 const SAMPLE_TASK_MARKDOWN = `---

@@ -4,7 +4,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { getDefaultHttpClient, NotFoundError } from "../services/http-client.js";
+import { getDefaultHttpClient } from "../services/http-client.js";
 import { TASK_INDEX_URL, parseTaskIndex, type PipelineTask } from "./search-tasks.js";
 import { AzureDevOpsClient, TaskDefinition } from "../services/azure-devops-client.js";
 
@@ -344,7 +344,7 @@ async function findTaskInOrganization(taskName: string, version: string): Promis
 		if (matchedTask) {
 			return convertTaskDefinitionToReference(matchedTask);
 		}
-	} catch (error) {
+	} catch {
 		// Ignorujeme chyby API (není nastaveno nebo chyba sítě)
 	}
 	return null;
@@ -369,7 +369,7 @@ export async function handleGetTaskReference(taskName: string): Promise<string> 
 	let taskInfo: PipelineTask | null = null;
 	try {
 		taskInfo = await findTaskInIndex(taskName);
-	} catch (error) {
+	} catch {
 		// Ignorujeme chybu indexu pro teď, zkusíme API fallback
 	}
 
@@ -382,7 +382,7 @@ export async function handleGetTaskReference(taskName: string): Promise<string> 
 			const markdown = await httpClient.fetch(docUrl, { cacheTtlMs: TASK_REFERENCE_CACHE_TTL_MS });
 			const reference = parseTaskMarkdown(markdown, name, version);
 			return JSON.stringify(reference, null, 2);
-		} catch (error) {
+		} catch {
 			// Pokud dokumentace neexistuje, zkusíme API fallback
 		}
 	}

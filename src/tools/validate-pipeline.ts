@@ -71,7 +71,17 @@ export async function validatePipelineYaml(
 	// Preview API needs specific api-version to work reliably
 	const endpoint = `_apis/pipelines/${pipelineId}/preview?api-version=7.1-preview.1`;
 	
-	const body: any = {
+	const body: {
+		previewRun: boolean;
+		yamlOverride: string;
+		resources?: {
+			repositories: {
+				self: {
+					refName: string;
+				};
+			};
+		};
+	} = {
 		previewRun: true,
 		yamlOverride: yaml,
 	};
